@@ -1,6 +1,28 @@
 #ifndef TCPSOCKET_H
 #define TCPSOCKET_H
 
-// Your code here
+#include "baseSocket.hpp"
+#include <vector>
+#include <string>
 
-#endif // TCPSOCKET_H
+
+namespace Gut{
+    typedef std::vector<SOCKET> SocketList;
+    typedef std::string String;
+
+    class TcpSocket : public BaseSocket {
+        private:
+            SocketList clients;
+        public:
+            TcpSocket();
+            ~TcpSocket();
+            void listen();
+            void accept();
+            SocketList* getClients();
+            String receive(SOCKET client);
+    };
+};
+
+
+
+#endif 
