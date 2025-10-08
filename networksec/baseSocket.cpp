@@ -27,6 +27,7 @@ Gut::BaseSocket::BaseSocket(int type) {
     } else {
         std::cout << "socket initialized" << std::endl;
     }
+	fflush(stdout);
 }
 
 void Gut::BaseSocket::bind(){
@@ -41,8 +42,9 @@ void Gut::BaseSocket::bind(){
         exit(1);
     }
     else {
-        std::cout << "bind() is OK." << std::endl;
+        std::cout << "bound to port: "<< DEFAULT_PORT << std::endl;
     }
+	fflush(stdout);
 }
 
 SOCKET Gut::BaseSocket::getSocket(){
