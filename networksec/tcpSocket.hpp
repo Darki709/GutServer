@@ -4,10 +4,11 @@
 #include "baseSocket.hpp"
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 
 namespace Gut{
-    typedef std::vector<SOCKET> SocketList;
+    typedef std::unordered_set<SOCKET> SocketList;
     typedef std::string String;
 
     class TcpSocket : public BaseSocket {

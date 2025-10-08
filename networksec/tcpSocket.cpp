@@ -34,7 +34,7 @@ void Gut::TcpSocket::accept() {
     if (clientSocket == INVALID_SOCKET) {
         std::cout << "accept failed: " << WSAGetLastError() << std::endl;
     } else {
-        clients.push_back(clientSocket);
+        clients.insert(clientSocket);
         std::cout << "Client connected." << std::endl;
     }
 }
