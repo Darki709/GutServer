@@ -2,7 +2,6 @@
 #define TCPSOCKET_H
 
 #include "baseSocket.hpp"
-#include <vector>
 #include <string>
 #include <unordered_set>
 
@@ -21,6 +20,7 @@ namespace Gut{
             void accept();
             SocketList* getClients();
             String receive(SOCKET client);
+            int send(SOCKET client, String& message);            
     };
 };
 

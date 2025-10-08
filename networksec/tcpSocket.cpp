@@ -2,7 +2,7 @@
 
 
 Gut::TcpSocket::TcpSocket() : BaseSocket(SOCK_STREAM) {
-    std::cout << "TCP Socket created" << std::endl;
+    std::cout << "TCP Socket created" << std::endl;    
 }
 
 Gut::TcpSocket::~TcpSocket() {
@@ -41,6 +41,16 @@ void Gut::TcpSocket::accept() {
 
 Gut::SocketList* Gut::TcpSocket::getClients() {
     return &clients;
+}
+
+int Gut::TcpSocket::send(SOCKET client, String& message) {
+    int sendResult = ::send(client, message.c_str(), static_cast<int>(message.size()), 0);
+    if (sendResult == SOCKET_ERROR) {
+        std::cout << "send failed: " << WSAGetLastError() << std::endl;
+        closesocket(client);
+        clients.erase(client);
+    }
+    return sendResult;
 }
         
     

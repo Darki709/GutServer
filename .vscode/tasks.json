@@ -10,6 +10,7 @@
                 "gutweb.cpp",
                 "networksec/baseSocket.cpp",
                 "networksec/tcpSocket.cpp",
+                "networksec/udpSocket.cpp",
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe",
                 "-lws2_32"
