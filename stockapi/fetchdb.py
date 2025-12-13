@@ -1,10 +1,17 @@
 import sqlite3
 from datetime import datetime
+import os
+
+
+BASE_DIR = os.path.dirname(__file__)  # folder where fetchdb.py lives
+DB_DIR = os.path.join(BASE_DIR, "..", "build")  # parent folder + build
+os.makedirs(DB_DIR, exist_ok=True)  # make sure folder exists
+DB_PATH = os.path.join(DB_DIR, "stock_data.db")
 
 
 #creates the fetch history db
 def fetch_history_create():
-	conn = sqlite3.connect('../build/stock_data.db')
+	conn = sqlite3.connect(DB_PATH)
 	c = conn.cursor()
 	c.execute('''CREATE TABLE IF NOT EXISTS fetch_history
 				 (ticker TEXT,
@@ -16,7 +23,7 @@ def fetch_history_create():
 
 #creates the price history db
 def price_history_create():
-	conn = sqlite3.connect('../build/stock_data.db')
+	conn = sqlite3.connect(DB_PATH)
 	c = conn.cursor()
 	c.execute('''CREATE TABLE IF NOT EXISTS price_history
 				 (ticker TEXT,
@@ -34,7 +41,7 @@ def price_history_create():
 
 # Function to get the last fetch time to know range for updating data
 def last_fetch_time(ticker, interval):
-	conn = sqlite3.connect('../build/stock_data.db')
+	conn = sqlite3.connect(DB_PATH)
 	c = conn.cursor()
 	c.execute('''SELECT fetch_time FROM fetch_history
 				 WHERE ticker = ? AND interval = ?
@@ -42,14 +49,14 @@ def last_fetch_time(ticker, interval):
 	result = c.fetchone()
 	conn.close()
 	if result:
-		print("Last fetch time for {ticker} {interval}: {result[0]}")
+		print(f"Last fetch time for {ticker} {interval}: {result[0]}")
 		date = datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
 		return date
 	else:
 		return None
 	
 def update_fetch_time(ticker, interval, fetch_time):
-	conn = sqlite3.connect('../build/stock_data.db')
+	conn = sqlite3.connect(DB_PATH)
 	c = conn.cursor()
 	c.execute('''INSERT INTO fetch_history (ticker, interval, fetch_time)
 				VALUES (?, ?, ?) ON CONFLICT(ticker, interval) DO UPDATE SET
@@ -65,21 +72,21 @@ def insert_price_data(ticker, interval, data):
 
     conn = None
     try:
-        conn = sqlite3.connect('../build/stock_data.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
         rows = [
             (
                 ticker,
                 interval,
-                idx.strftime("%Y-%m-%d %H:%M:%S"),
+                row.Index.strftime("%Y-%m-%d %H:%M:%S"),
                 float(row.Open),
                 float(row.High),
                 float(row.Low),
                 float(row.Close),
                 int(row.Volume)
             )
-            for idx, row in data.itertuples()
+            for row in data.itertuples()
         ]
 
         c.executemany("""
@@ -95,6 +102,9 @@ def insert_price_data(ticker, interval, data):
         """, rows)
 
         conn.commit()
+        update_fetch_time(ticker, interval, data.index[-1].strftime("%Y-%m-%d %H:%M:%S"))
+        print(f"Inserted/Updated {len(rows)} rows for {ticker} {interval} \n")
+        print(rows)
         return len(rows)
 
     except Exception as e:
@@ -106,7 +116,4 @@ def insert_price_data(ticker, interval, data):
     finally:
         if conn:
             conn.close()
-
-
-
-	
+    
