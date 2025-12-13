@@ -49,7 +49,7 @@ def last_fetch_time(ticker, interval):
 	result = c.fetchone()
 	conn.close()
 	if result:
-		print("Last fetch time for {ticker} {interval}: {result[0]}")
+		print(f"Last fetch time for {ticker} {interval}: {result[0]}")
 		date = datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
 		return date
 	else:
@@ -79,14 +79,14 @@ def insert_price_data(ticker, interval, data):
             (
                 ticker,
                 interval,
-                idx.strftime("%Y-%m-%d %H:%M:%S"),
+                row.Index.strftime("%Y-%m-%d %H:%M:%S"),
                 float(row.Open),
                 float(row.High),
                 float(row.Low),
                 float(row.Close),
                 int(row.Volume)
             )
-            for idx, row in data.itertuples()
+            for row in data.itertuples()
         ]
 
         c.executemany("""
