@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #define LOCAL_HOST "127.0.0.1"
-#define DEFAULT_PORT 6769
+#define DEFAULT_PORT 6767
 
 // Your code here
 namespace Gut{

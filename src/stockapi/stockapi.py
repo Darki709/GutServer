@@ -20,8 +20,4 @@ def fetch_live_data(ticker,  interval):
 	if insert_price_data(ticker, interval, data) == -1:
 		return -2
 	
-if __name__ == "__main__":
-	fetch_history_create()
-	price_history_create()
-	fetch_live_data("AAPL", "1d")
 		

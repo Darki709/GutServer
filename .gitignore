@@ -1,2 +1,13 @@
+# CMake build dir
+build/
+
+# Visual Studio Code
+.vscode/
+
+# Visual Studio and other IDEs
+*.vcxproj*
+*.sln
 build/
 .venv/
+*.exe
+
