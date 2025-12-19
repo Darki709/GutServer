@@ -2,25 +2,28 @@
 #define TCPSOCKET_H
 
 #include "baseSocket.hpp"
-#include <string>
-#include <unordered_set>
+#include "../libraries.hpp"
+#include "../handlersec/client.hpp"
+#include "../handlersec/message.hpp"
 
 
 namespace Gut{
-    typedef std::unordered_set<SOCKET> SocketList;
-    typedef std::string String;
 
     class TcpSocket : public BaseSocket {
         private:
-            SocketList clients;
+            ClientSet ClientsSet;
+			std::queue<Message> outgoingMessages;
+
         public:
             TcpSocket();
-            ~TcpSocket();
+            virtual ~TcpSocket();
             void listen();
-            void accept();
-            SocketList* getClients();
-            String receive(SOCKET client);
-            int send(SOCKET client, String& message);            
+            int accept();
+            ClientSet* getClients();
+			std::queue<Message>& getMessages();
+            String* receive(SOCKET client);
+            int send(SOCKET client, const String& message);  
+			void acceptClients();          
     };
 };
 

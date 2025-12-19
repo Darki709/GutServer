@@ -1,10 +1,6 @@
 #ifndef BASESOCKET_H
 #define BASESOCKET_H
-//libraries
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iostream> 
-#include <stdio.h>
+#include "../libraries.hpp"
 
 #define LOCAL_HOST "127.0.0.1"
 #define DEFAULT_PORT 6767
@@ -20,7 +16,7 @@ class BaseSocket {
         void bind();
         SOCKET getSocket();
 };
-};
+}
 
 
 

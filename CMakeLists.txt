@@ -20,10 +20,10 @@ find_package(Python3 REQUIRED
 
 file(GLOB_RECURSE CPP_SOURCES
     src/**/*.cpp
+	src/*.cpp
 )
 
 add_executable(gutweb
-    gutweb.cpp
     ${CPP_SOURCES}
 )
 
@@ -32,7 +32,6 @@ add_executable(gutweb
 # =========================
 target_include_directories(gutweb
     PRIVATE
-        ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/src
 )
 
