@@ -84,7 +84,6 @@ std::string Gut::TcpSocket::receive(SOCKET client) {
 		int err = WSAGetLastError();
 		std::cout << "recv failed: " << err << std::endl;
 		throw err;
-		return "";
 	}
 	buffer[bytesReceived] = '\0'; // Null-terminate the received data
 	return String(buffer);

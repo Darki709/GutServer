@@ -37,7 +37,7 @@ namespace Gut {
 		//flush the client buffer (as much as os allows)
 		bool flushClient(Client& client);
 		//kick a client out
-		ClientSet::iterator kick(Client& client);
+		void kick(Client& client);
 		ClientSet::iterator kick(ClientSet::iterator it);
 
 	public:

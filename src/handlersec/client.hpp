@@ -17,7 +17,7 @@ class Client
 	public:
 		Client(SOCKET socket);
 		~Client();
-		virtual bool isAuthed(); //false fro regular clients
+		virtual bool isAuthed(); //false for regular clients
 		SOCKET getSocket();
 		void remove(); //remove out a client
 		//add characters to the message buffers

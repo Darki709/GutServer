@@ -21,4 +21,5 @@ namespace Gut {
 	typedef std::string String;
 	typedef unsigned long UsrID;
 	typedef std::byte EncryptKey;
+	typedef std::unordered_map<SOCKET, Client> ClientSet;
 }

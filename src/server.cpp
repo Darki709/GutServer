@@ -42,11 +42,11 @@ void Gut::Server::serverRun() {
 		FD_SET(serverSocket->getSocket(), &readfds);
 		FD_ZERO(&writefds);
 		//add clients to check for readability
-        for(auto& pair : serverSocket->getClients()) {
+        for(auto& pair : clients) {
             FD_SET(pair.first, &readfds);
 		}
 		//build write set only for clients with pending outgoing messages
-		for(auto& [socket, client] : serverSocket->getClients()){
+		for(auto& [socket, client] : clients){
 			if(!client.getOutBuffer().empty()){
 				FD_SET(socket, &writefds);
 			}
@@ -156,14 +156,13 @@ void Gut::Server::proccesOutMessages(){
 //fix this logic to support partial recieves
 void Gut::Server::checkRequests(ClientSet& clients, fd_set& readfds) {
 	//check clients for requests and push to their buffers
-			for(std::pair<SOCKET, Client> pair : clients) {
+			for(std::pair<SOCKET, Client>& pair : clients) {
 				SOCKET clientSocket = pair.first;
 				if(FD_ISSET(clientSocket, &readfds)) {
 					try{
 						String msg = serverSocket->receive(clientSocket);
 						if(msg.length() > 0) {						
 							pair.second.pushInBuffer(msg);
-
 						}
 						String& clientBuffer = pair.second.getInBuffer();
 						while(clientBuffer.length() >= 4){
@@ -179,7 +178,7 @@ void Gut::Server::checkRequests(ClientSet& clients, fd_set& readfds) {
 							msg = clientBuffer.substr(4, msgLength);
 
 							//add task
-							pushTask(std::move(Task::createTask(pair.second, msg)));
+							pushTask(std::move(Task::createTask(pair.first, msg)));
 
 							//remove the extracted message from buffer
 							clientBuffer.erase(0, 4 + msgLength);
@@ -195,3 +194,24 @@ void Gut::Server::checkRequests(ClientSet& clients, fd_set& readfds) {
 			}
 	
 }
+
+Gut::ClientSet::iterator Gut::Server::kick(ClientSet::iterator it){
+	Client& client = it->second;
+    SOCKET sock = client.getSocket();
+
+    // Close the socket
+    closesocket(sock);
+
+    // Remove client from map and return next iterator, used to kick while looping over the client set
+    return serverSocket->getClients().erase(it);
+}
+
+void Gut::Server::kick(Client& client){
+		SOCKET sock = client.getSocket();
+
+    // Close socket
+    closesocket(sock);
+
+	//remove from client map
+	serverSocket->getClients().erase(sock);
+}	

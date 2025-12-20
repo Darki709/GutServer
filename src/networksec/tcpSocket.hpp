@@ -21,7 +21,7 @@ namespace Gut{
             int accept();
             ClientSet& getClients();
 			std::queue<Message>& getMessages();
-            String* receive(SOCKET client);
+            String receive(SOCKET client);
             int send(SOCKET client, const String& message);  
 			void acceptClients();          
     };

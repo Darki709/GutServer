@@ -8,11 +8,11 @@
 namespace Gut {
 	class Task {
 	private:
-		Client* assignedClient;
+		SOCKET assignedClient;
 	public:
 		Task(Client &client);
 		virtual ~Task() = default;
-		static Task& createTask(Client &client, const String& data);
+		static Task& createTask(SOCKET client, const String& data);
 		virtual String* getHeaders() = 0;
 		virtual String* getData() = 0;
 		int getClientId();
