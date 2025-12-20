@@ -64,8 +64,8 @@ int Gut::TcpSocket::accept() {
     }
 }
 
-Gut::ClientSet* Gut::TcpSocket::getClients() {
-    return &clients;
+Gut::ClientSet& Gut::TcpSocket::getClients() {
+    return clientSet;
 }
 
 int Gut::TcpSocket::send(SOCKET client, const String& message) {
@@ -77,17 +77,17 @@ int Gut::TcpSocket::send(SOCKET client, const String& message) {
 }
 
 
-std::string* Gut::TcpSocket::receive(SOCKET client) {
+std::string Gut::TcpSocket::receive(SOCKET client) {
 	char buffer[1024];
 	int bytesReceived = ::recv(client, buffer, sizeof(buffer) - 1, 0);
 	if (bytesReceived == SOCKET_ERROR) {
-		std::cout << "recv failed: " << WSAGetLastError() << std::endl;
-		//signal error to caller
-		throw std::runtime_error("Receive failed");
-		return nullptr;
+		int err = WSAGetLastError();
+		std::cout << "recv failed: " << err << std::endl;
+		throw err;
+		return "";
 	}
 	buffer[bytesReceived] = '\0'; // Null-terminate the received data
-	return new String(buffer);
+	return String(buffer);
 }
         
     
@@ -95,7 +95,7 @@ void Gut::TcpSocket::acceptClients() {
 	int err;
 	while((err = this->accept()) == 0);
 	if(err != WSAEWOULDBLOCK) {
-		throw std::runtime_error("Error accepting clients");
+		std::cout << WSAGetLastError() << std::endl;
 	}
 }
 

@@ -8,15 +8,17 @@ namespace Gut {
     class Message {
         private:
             std::string content;
-			Client* recipient;
+			SOCKET recipient;
+			//encrypts with the clients key
 			String encrypt();
+			//frames the content | 4-byte length | payload bytes ... |
 			String frame();
         public:
-			//crates a message, frames the content [4 bytes length, content encrypted with client key]
+			//crates a message
             Message(const std::string& content, const Client* recipient); 
 			String decrypt();
 			std::string& getContent() const;
-			Client& getRecipient();
+			SOCKET getRecipient();
     };
 }
 

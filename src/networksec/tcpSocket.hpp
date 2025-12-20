@@ -11,7 +11,7 @@ namespace Gut{
 
     class TcpSocket : public BaseSocket {
         private:
-            ClientSet ClientsSet;
+            ClientSet clientSet;
 			std::queue<Message> outgoingMessages;
 
         public:
@@ -19,7 +19,7 @@ namespace Gut{
             virtual ~TcpSocket();
             void listen();
             int accept();
-            ClientSet* getClients();
+            ClientSet& getClients();
 			std::queue<Message>& getMessages();
             String* receive(SOCKET client);
             int send(SOCKET client, const String& message);  

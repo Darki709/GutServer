@@ -143,7 +143,7 @@ void Gut::Server::proccesOutMessages(){
 	while (!local.empty()) {
         Message& msg = local.front();
 		
-        auto it = clients.find(msg.getRecipient().getSocket());
+        auto it = clients.find(msg.getRecipient());
         if (it != clients.end()) {
 			it->second.pushOutBuffer(msg.getContent());         
         }
@@ -155,14 +155,43 @@ void Gut::Server::proccesOutMessages(){
 
 //fix this logic to support partial recieves
 void Gut::Server::checkRequests(ClientSet& clients, fd_set& readfds) {
-	//check clients for requests
-			for(auto& pair : clients) {
+	//check clients for requests and push to their buffers
+			for(std::pair<SOCKET, Client> pair : clients) {
 				SOCKET clientSocket = pair.first;
 				if(FD_ISSET(clientSocket, &readfds)) {
-					String* msg = serverSocket->receive(clientSocket);
-					if(msg != nullptr) {						
-						pushTask(std::move(Task::createTask(clients.at(clientSocket), *msg))); //make sure to the delete message
+					try{
+						String msg = serverSocket->receive(clientSocket);
+						if(msg.length() > 0) {						
+							pair.second.pushInBuffer(msg);
+
+						}
+						String& clientBuffer = pair.second.getInBuffer();
+						while(clientBuffer.length() >= 4){
+							uint32_t msgLength;
+							//get length of message and format for host machine
+							memcpy(&msgLength, clientBuffer.data(), 4);
+							msgLength = ntohl(msgLength);
+
+							//check if full message was recieved
+							if(clientBuffer.length() < 4 + msgLength)
+								break;
+							
+							msg = clientBuffer.substr(4, msgLength);
+
+							//add task
+							pushTask(std::move(Task::createTask(pair.second, msg)));
+
+							//remove the extracted message from buffer
+							clientBuffer.erase(0, 4 + msgLength);
+						}
+					}
+					catch(int err){
+						if(err = WSAECONNRESET || err == WSAENOTCONN || err == WSAESHUTDOWN){
+							kick(pair.second);
+						}
 					}
 				}
+
 			}
+	
 }
