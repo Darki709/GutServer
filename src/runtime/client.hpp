@@ -9,10 +9,10 @@
 namespace Gut
 {
 	enum class ClientState : int{
-		CONNECTED, //socket accepted
-		HANDSHAKE_VERIFY, //verify sent
-		ENCRYPTED, //secure tunnel achieved
-		AUTHENTICATED //user logged in
+		CONNECTED = 0, //socket accepted
+		HANDSHAKE_VERIFY = 1, //verify sent
+		ENCRYPTED = 2, //secure tunnel achieved
+		AUTHENTICATED = 3 //user logged in
 	};
 
 	struct AuthContext {

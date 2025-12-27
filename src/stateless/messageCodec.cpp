@@ -52,16 +52,16 @@ void decrypt(Gut::String& content, Gut::Client& client){
 void Gut::MessageCodec::decode(Message& msg, Client& client){
 	String content = msg.getContent();
 
-	//remove length bytes
-	content.erase(0,4);
+	std::cout << content << std::endl;
 
 	//extract the flag
-	uint8_t flag = static_cast<uint8_t>(content[0]);
+	int flag = static_cast<int>(content[0]);
 	//remove flag bytes
 	content.erase(0,1);
 
 	//checks for a combinatin of either client that should have necrypted messages with flag set to encrypted
 	//or a client with no encryption that has a no encryption flag any other combination is invalid and kicked
+	std::cout << flag << std::endl;
 	if(flag == 1){
 		if((int)client.getState() > 1){
 			decrypt(msg.getContent(), client);

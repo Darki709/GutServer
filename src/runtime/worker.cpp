@@ -38,7 +38,7 @@ namespace Gut
 			catch (...)
 			{
 				// task failed, worker lives
-				std::cerr << "Worker: task execution failed\n";
+				std::cout << "Worker: task execution failed" << std::endl;
 			}
 		}
 	}

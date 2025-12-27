@@ -22,21 +22,21 @@ Gut::Server::Server()
 
 Gut::Server::~Server()
 {
-    // 1. signal workers to stop
-    running = false;
+	// 1. signal workers to stop
+	running = false;
 
-    // 2. wake all workers blocked on taskCV
-    taskCV.notify_all();
+	// 2. wake all workers blocked on taskCV
+	taskCV.notify_all();
 
-    // 3. destroy workers (they must join internally)
-    for (int i = 0; i < WORKERCOUNT; i++)
-    {
-        delete workers[i];
-        workers[i] = nullptr;
-    }
+	// 3. destroy workers (they must join internally)
+	for (int i = 0; i < WORKERCOUNT; i++)
+	{
+		delete workers[i];
+		workers[i] = nullptr;
+	}
 
-    // 4. close server socket last
-    delete serverSocket;
+	// 4. close server socket last
+	delete serverSocket;
 }
 
 void Gut::Server::serverStart()
@@ -84,6 +84,7 @@ void Gut::Server::serverRun()
 			}
 		}
 		// block thread and wait for incoming or outgoing messages
+		//std::cout << "waiting on select" << std::endl;
 		int activity = select(0, &readfds, &writefds, nullptr, &tv);
 		if (activity == SOCKET_ERROR)
 		{
@@ -92,12 +93,15 @@ void Gut::Server::serverRun()
 		}
 		else
 		{
+			//std::cout << "checking for new clinets" << std::endl;
 			// check for new connections
 			if (FD_ISSET(serverSocket->getSocket(), &readfds))
 			{
 				acceptClients();
 			}
+			//std::cout << "checking for new requests" << std::endl;
 			checkRequests(clients, readfds);
+			//std::cout << "sending messages" << std::endl;
 			sendResponses(writefds);
 		}
 	}
@@ -203,53 +207,62 @@ void Gut::Server::proccesOutMessages()
 // recieves bytes from clients and checks if there are full messages ready to parse to tasks
 void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 {
-	// check clients for requests and push to their buffers
-	for (auto &[socket, client] : clients)
+	for (auto it = clients.begin(); it != clients.end();) // Manual iterator
 	{
-		SOCKET clientSocket = socket;
-		if (FD_ISSET(clientSocket, &readfds))
+		auto &[socket, client] = *it;
+		if (FD_ISSET(socket, &readfds))
 		{
 			try
 			{
-				String msg = serverSocket->receive(clientSocket);
-				if (msg.length() > 0)
+				std::cout << "starting recv" << std::endl;
+				String raw = serverSocket->receive(socket);
+				std::cout << raw << std::endl;
+				if (raw.length() > 0)
 				{
-					client->pushInBuffer(msg);
+					client->pushInBuffer(raw);
+					std::cout << "[RECV] Socket " << socket << " | Received: " << raw.length()
+							  << " bytes | Total Buffer: " << client->getInBuffer().length() << std::endl;
 				}
-				const String &clientBuffer = client->getInBuffer();
-				while (clientBuffer.length() >= 4)
+				while (client->getInBuffer().length() >= 4)
 				{
-					uint32_t msgLength;
-					// get length of message and format for host machine
-					memcpy(&msgLength, clientBuffer.data(), 4);
-					msgLength = ntohl(msgLength);
+					uint32_t len;
+					memcpy(&len, client->getInBuffer().data(), 4);
+					len = ntohl(len);
 
-					// check if full message was recieved
-					if (clientBuffer.length() < 4 + msgLength)
+					std::cout << "[FRAME] Socket " << socket << " | Header says next msg is: " << len << " bytes" << std::endl;
+
+					if (client->getInBuffer().length() < 4 + len)
+					{
+						std::cout << "[WAIT] Need " << (4 + len) - client->getInBuffer().length() << " more bytes for full message." << std::endl;
 						break;
+					}
 
-					msg = clientBuffer.substr(4, msgLength);
-					// decode the message
-					Message message(msg, clientSocket);
+					//removes the length bytes before creating the message
+					String msgContent = client->getInBuffer().substr(4, len);
+					Message message(msgContent, socket);
+
+					std::cout << "[CRYPTO] Attempting Decode..." << std::endl;
 					MessageCodec::decode(message, *client);
+					std::cout << "[CRYPTO] Decode Successful." << std::endl;
 
-					pushTask(std::move(TaskFactory::createTask(std::move(message), *client)));
+					pushTask(TaskFactory::createTask(std::move(message), *client));
 
-					// remove the extracted message from buffer
-					client->popOutBuffer(4 + msgLength);
+					client->popInBuffer(4 + len);
 				}
+				++it; // Only increment if we didn't kick
 			}
-			catch (int err)
-			{
-				if (err == WSAECONNRESET || err == WSAENOTCONN || err == WSAESHUTDOWN)
-				{
-					kick(client);
-				}
+			catch(std::runtime_error e){
+				std::cout << e.what() << std::endl;
+				it = kick(it);
 			}
-			catch (std::runtime_error err)
-			{
-				kick(client);
-			}
+			catch (...) {
+				std::cout << "exception caught" << std::endl;
+                it = kick(it);
+            }
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
@@ -304,26 +317,27 @@ void Gut::Server::acceptClients()
 
 std::unique_ptr<Gut::Task> Gut::Server::popTask()
 {
-    std::unique_lock<std::mutex> lock(taskMutex);
+	std::unique_lock<std::mutex> lock(taskMutex);
 
-    taskCV.wait(lock, [this]() {
-        return !running || !taskQueue.empty();
-    });
+	taskCV.wait(lock, [this]()
+				{ return !running || !taskQueue.empty(); });
 
-    if (!running)
-        return nullptr;
+	if (!running)
+		return nullptr;
 
-    auto task = std::move(taskQueue.front());
-    taskQueue.pop();
-    return task;
+	auto task = std::move(taskQueue.front());
+	taskQueue.pop();
+	return task;
 }
 
-void Gut::Server::addMessage(Message&& msg){
+void Gut::Server::addMessage(Message &&msg)
+{
 	std::lock_guard<std::mutex> lock(messageMutex);
 	messageQueue.push(std::move(msg));
 }
 
-bool Gut::Server::taskQueueEmpty() {
-    std::lock_guard<std::mutex> lock(taskMutex);
-    return taskQueue.empty();
+bool Gut::Server::taskQueueEmpty()
+{
+	std::lock_guard<std::mutex> lock(taskMutex);
+	return taskQueue.empty();
 }

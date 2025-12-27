@@ -15,7 +15,7 @@ std::optional<Gut::Message> Gut::HandShakeHello::execute()
 		throw CLIENTNOTFOUND;
 	}
 
-	//generate aes-256 session key
+	//generate aes-256 session keys
 	Gut::SessionKey sessionKey;
 	if (RAND_bytes(sessionKey.data(), sessionKey.size()) != 1) {
         throw std::runtime_error("Failed to generate random AES key");

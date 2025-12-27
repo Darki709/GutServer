@@ -1,9 +1,6 @@
 #include "client.hpp"
 
-Gut::Client::Client(SOCKET socket){
-	clientSocket = socket;
-	state = ClientState::CONNECTED;
-}
+Gut::Client::Client(SOCKET socket) : clientSocket(socket) , state(ClientState::CONNECTED){}
 
 Gut::Client::~Client(){
 	incomingBuffer.clear();
