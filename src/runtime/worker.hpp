@@ -4,21 +4,24 @@
 #include "../libraries.hpp"
 #include "task.hpp"
 
-namespace Gut{
+namespace Gut {
+    class Server; // forward declaration
 
-	//class to abstract aworker thread reading from the shared task queue and executing tasks
-	class Worker{
-		private:
-			std::queue<std::unique_ptr<Task>>& taskQueue; 
-			Task getNewTask();
-			void pushMessage(Message&& message);
-		public:
-			Worker(std::queue<std::unique_ptr<Task>>& queue);
-			~Worker();
-			void start();
-			void stop();
-	};
+    class Worker {
+    private:
+        std::thread thread;
+        Server* server; // pointer to Server, forward-declared
+        bool stopFlag = false;
+
+        void run(); // main worker loop
+
+    public:
+        explicit Worker(Server* srv);
+        ~Worker();
+
+        void start();
+        void stop();
+    };
 }
-
 
 #endif

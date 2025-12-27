@@ -31,12 +31,6 @@ namespace Gut {
 		//keep track of all te workers
 		Worker* workers[WORKERCOUNT] = {};
 
-		//safe access to the task queue
-		std::mutex taskMutex;
-		std::condition_variable taskCV;
-
-		//safe access to the message queue
-		std::mutex messageMutex;
 
 		//loops over new connection requests
 		void acceptClients();
@@ -52,7 +46,14 @@ namespace Gut {
 		void kick(std::shared_ptr<Client> client);
 		ClientSet::iterator kick(ClientSet::iterator it);
 
+		//safe access to the task queue
+		std::mutex taskMutex;
+		std::condition_variable taskCV;
 
+		//safe access to the message queue
+		std::mutex messageMutex;
+
+		bool running{true};
 	public:
 
 		static Server& getInstance(); //singleton contructor
@@ -66,9 +67,14 @@ namespace Gut {
 		//mian loop
 		void serverRun();
 		//push new task to the task queue
-		void pushTask(std::unique_ptr<Task> task);		
+		void pushTask(std::unique_ptr<Task> task);
+		//pop task
+		std::unique_ptr<Task> popTask();		
 		//allows workers to add messages to the outgoing messages queue
 		void addMessage(Message&& message);
+
+		
+		bool taskQueueEmpty();
 	};
 }
 #endif
