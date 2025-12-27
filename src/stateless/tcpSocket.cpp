@@ -29,22 +29,15 @@ void Gut::TcpSocket::listen() {
     }
 }
 
-int Gut::TcpSocket::accept() {
+//returns theclient socket on success
+SOCKET Gut::TcpSocket::accept() {
 	char ip_str[INET_ADDRSTRLEN];
     SOCKET clientSocket;
     sockaddr_in clientInfo;
     int clientInfoSize = sizeof(clientInfo);
 
     clientSocket = ::accept(getSocket(), (SOCKADDR*)&clientInfo, &clientInfoSize);
-    if (clientSocket == INVALID_SOCKET) {
-		if(WSAGetLastError() != WSAEWOULDBLOCK){
-        	std::cout << "accept failed: " << WSAGetLastError() << std::endl;
-			return INVALID_SOCKET;
-		}
-		else{
-			return WSAEWOULDBLOCK; //no pending connections
-		}
-    } else {
+    if (clientSocket != INVALID_SOCKET) {
 		//get client credentials
 		inet_ntop(
     	AF_INET,
@@ -59,13 +52,11 @@ int Gut::TcpSocket::accept() {
 		if(ioctlsocket(clientSocket, FIONBIO, &mode) != 0) {
 			throw std::runtime_error("nonblocking mode failed");
 		}
-        std::cout << "Client connected and pending authentication "<< ip_str << ":" << port << std::endl;
-		return 0;
-    }
-}
 
-Gut::ClientSet& Gut::TcpSocket::getClients() {
-    return clientSet;
+        std::cout << "Client connected and pending authentication "<< ip_str << ":" << port << std::endl;
+		//returns the client socket to add to the client set in the server
+    }
+	return clientSocket; //returns the socket for error handling or for adding client to client set
 }
 
 int Gut::TcpSocket::send(SOCKET client, const String& message) {
@@ -88,16 +79,4 @@ std::string Gut::TcpSocket::receive(SOCKET client) {
 	buffer[bytesReceived] = '\0'; // Null-terminate the received data
 	return String(buffer);
 }
-        
-    
-void Gut::TcpSocket::acceptClients() {
-	int err;
-	while((err = this->accept()) == 0);
-	if(err != WSAEWOULDBLOCK) {
-		std::cout << WSAGetLastError() << std::endl;
-	}
-}
 
-std::queue<Gut::Message>& Gut::TcpSocket::getMessages(){
-	return outgoingMessages;
-}

@@ -1,0 +1,61 @@
+#include "client.hpp"
+
+Gut::Client::Client(SOCKET socket){
+	clientSocket = socket;
+	state = ClientState::CONNECTED;
+}
+
+Gut::Client::~Client(){
+	incomingBuffer.clear();
+	outgoingBuffer.clear();
+}
+
+SOCKET Gut::Client::getSocket(){
+	return clientSocket;
+}
+
+void Gut::Client::pushInBuffer(const String& content){
+	incomingBuffer.append(content);
+}
+
+void Gut::Client::pushOutBuffer(const String& content){
+	outgoingBuffer.append(content);
+}
+
+void Gut::Client::popInBuffer(int len){
+	incomingBuffer.erase(0, len);
+}
+
+
+void Gut::Client::popOutBuffer(int len){
+	outgoingBuffer.erase(0, len);
+}
+
+const Gut::String& Gut::Client::getInBuffer(){
+	return incomingBuffer;
+}
+
+const Gut::String& Gut::Client::getOutBuffer(){
+	return outgoingBuffer;
+}
+
+Gut::CryptoContext& Gut::Client::getCipher(){
+	try{
+	return cipher.value();}
+	catch(...){
+		std::cout << "you didn't check client state correctly in code" << std::endl;
+	}
+}
+
+const Gut::ClientState Gut::Client::getState(){
+	return state;
+}
+
+void Gut::Client::setState(ClientState state){
+	this->state = state;
+}
+
+void Gut::Client::setClientEncrypted(SessionKey key){
+	setState(ClientState::ENCRYPTED);
+	//
+}

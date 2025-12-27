@@ -3,9 +3,13 @@
 
 #include "libraries.hpp"
 
-#include "networksec/tcpSocket.hpp"
-#include "handlersec/task.hpp"
-#include "handlersec/worker.hpp"
+#include "../stateless/tcpSocket.hpp"
+#include "../logic/taskFactory.hpp"
+#include "../runtime/worker.hpp"
+#include "../runtime/client.hpp"
+#include "../core/message.hpp"
+#include "../logic/task.hpp"
+#include "../stateless/messageCodec.hpp"
 
 #define WORKERCOUNT 2
 
@@ -13,12 +17,18 @@
 
 namespace Gut {
 
+	typedef std::unordered_map<SOCKET, Client> ClientSet;
 	class Server {
 	private: 
 		TcpSocket* serverSocket;
-		std::queue<Task> taskQueue; //main taks queue, server pushes client
+
+		ClientSet clients;
+
+		std::queue<Message> messageQueue;//queue where workers push messages in so the server can proccess and send them
+		std::queue<std::unique_ptr<Gut::Task>> taskQueue; //main tasks queue, server pushes client
 		// requests in and handlers complete the tasks and push to the an adequate outgoing messages queue
 
+		//keep track of all te workers
 		Worker* workers[WORKERCOUNT] = {};
 
 		//safe access to the task queue
@@ -28,6 +38,8 @@ namespace Gut {
 		//safe access to the message queue
 		std::mutex messageMutex;
 
+		//loops over new connection requests
+		void acceptClients();
 		//send responses to clients
 		void sendResponses(fd_set& writefds); 
 		//checks which clients sent requests and adds it to task queue
@@ -40,7 +52,13 @@ namespace Gut {
 		void kick(Client& client);
 		ClientSet::iterator kick(ClientSet::iterator it);
 
+
 	public:
+
+		static Server& getInstance(); //singleton contructor
+		
+		Client& getClient(SOCKET socket);
+
 		Server();
 		~Server();
 		//initialize server socket, statr listening and intialize other subsystems
@@ -48,7 +66,7 @@ namespace Gut {
 		//mian loop
 		void serverRun();
 		//push new task to the task queue
-		void pushTask(Task&& task);		
+		void pushTask(std::unique_ptr<Task> task);		
 		//allows workers to add messages to the outgoing messages queue
 		void addMessage(Message&& message);
 	};

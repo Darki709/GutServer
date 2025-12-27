@@ -1,16 +1,16 @@
 #include "gutweb.hpp"
 
+// file that holds the main function
 
-//file that holds the main function
-
-int main() {
-	Gut::Server serverInstance;
+int main()
+{
+	Gut::Server &serverInstance = Gut::Server::getInstance();
 	serverInstance.serverStart();
-    std::thread input(Gut::consoleThread);  // start console command listener
+	// start console command listener
+	std::thread input(Gut::consoleThread);
 	serverInstance.serverRun();
-    return 0;
+	return 0;
 }
-
 
 // Console command listener thread
 void Gut::consoleThread() {
@@ -29,6 +29,3 @@ void Gut::Shutdown() {
     Gut::running = false;
 	exit(0);
 }
-
-
-

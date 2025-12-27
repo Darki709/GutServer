@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIBRARIES_HPP
+#define LIBRARIES_HPP
 
 // Centralized common headers for the project
 #include <winsock2.h>
@@ -15,11 +16,20 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <optional>
+#include <array>
 
 
 namespace Gut {
+
 	typedef std::string String;
-	typedef unsigned long UsrID;
+	typedef uint32_t UsrID;
 	typedef std::byte EncryptKey;
-	typedef std::unordered_map<SOCKET, Client> ClientSet;
+	typedef std::array<uint8_t, 32> SessionKey; // AES-256
+
+	enum Errors{
+		CLIENTNOTFOUND,
+	};
 }
+
+#endif
