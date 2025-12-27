@@ -2,9 +2,7 @@
 
 
 
-Gut::Message::Message(const String& content, SOCKET recipient){
-	this->content = content;
-	this->recipient = recipient;
+Gut::Message::Message(String content, SOCKET recipient) : content(content) , recipient(recipient){
 }
 
 

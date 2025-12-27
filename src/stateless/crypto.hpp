@@ -18,7 +18,7 @@ namespace Gut
 		AESGCM();
 		~AESGCM();
 		
-		void init(const SessionKey &key);
+		void init(SessionKey &key);
 
 		bool encrypt(
 			uint64_t nonce,
@@ -31,6 +31,8 @@ namespace Gut
 			const uint8_t *ciphertext,
 			size_t len,
 			std::vector<uint8_t> &out);
+
+		SessionKey& getKey();
 	};
 }
 #endif

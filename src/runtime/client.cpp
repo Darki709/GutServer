@@ -40,11 +40,7 @@ const Gut::String& Gut::Client::getOutBuffer(){
 }
 
 Gut::CryptoContext& Gut::Client::getCipher(){
-	try{
-	return cipher.value();}
-	catch(...){
-		std::cout << "you didn't check client state correctly in code" << std::endl;
-	}
+	return cipher;
 }
 
 const Gut::ClientState Gut::Client::getState(){
@@ -58,4 +54,11 @@ void Gut::Client::setState(ClientState state){
 void Gut::Client::setClientEncrypted(SessionKey key){
 	setState(ClientState::ENCRYPTED);
 	//
+}
+
+//initializes client secure encryption stats
+void Gut::Client::startTunnel(){
+	cipher.recvNonce = 0;
+	cipher.sendNonce = 0;
+	state = ClientState::ENCRYPTED;
 }

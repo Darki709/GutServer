@@ -10,8 +10,8 @@ namespace Gut
 {
 	enum class ClientState : int{
 		CONNECTED, //socket accepted
-		HANDSHAKING, //handshake in progress
-		ENCRYPTED, //shared private key exchanged
+		HANDSHAKE_VERIFY, //verify sent
+		ENCRYPTED, //secure tunnel achieved
 		AUTHENTICATED //user logged in
 	};
 
@@ -26,7 +26,7 @@ namespace Gut
     	uint64_t recvNonce;
 	};
 
-	class Client
+	class Client : public std::enable_shared_from_this<Client>
 	{
 	private:
 
@@ -38,7 +38,7 @@ namespace Gut
 
 
 		//encryption
-		std::optional<CryptoContext> cipher;
+		CryptoContext cipher;
 
 		//message buffers
 		String incomingBuffer;
@@ -65,6 +65,8 @@ namespace Gut
 		CryptoContext& getCipher();
 		
 		void setClientEncrypted(SessionKey key); //initializes crypto context after client succefully finished te private key exchange 
+		
+		void startTunnel();
 	};
 
 }

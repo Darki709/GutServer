@@ -13,6 +13,7 @@ void encrypt(Gut::String& content, Gut::Client& client){
 }
 
 //overwrites the content variable of the message with a framed version of it according to the protocol
+//message should already come with msg type and content
 void Gut::MessageCodec::encode(Message& msg, Client& client){
 	char8_t isEncrypted = 0;
 	//checks if client's messages should be encrypted
@@ -56,6 +57,7 @@ void Gut::MessageCodec::decode(Message& msg, Client& client){
 
 	//extract the flag
 	uint8_t flag = static_cast<uint8_t>(content[0]);
+	//remove flag bytes
 	content.erase(0,1);
 
 	//checks for a combinatin of either client that should have necrypted messages with flag set to encrypted

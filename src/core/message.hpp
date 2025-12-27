@@ -5,6 +5,12 @@
 
 namespace Gut
 {
+	enum class MsgType : uint8_t
+	{
+		HANDSHAKEVERIFY,
+		HANDSHAKESUCCESS,
+	};
+	
 	class Message
 	{
 	private:
@@ -14,7 +20,7 @@ namespace Gut
 
 	public:
 		// crates a message
-		Message(const String& content, SOCKET recipient);
+		Message(String content, SOCKET recipient);
 		String &getContent();
 		SOCKET getRecipient();
 	};

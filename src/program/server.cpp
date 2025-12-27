@@ -1,4 +1,8 @@
 #include "server.hpp"
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <cstring>
 
 
 Gut::Server& Gut::Server::getInstance(){
@@ -59,12 +63,12 @@ void Gut::Server::serverRun()
 		// add clients to check for readability
 		for (auto &pair : clients)
 		{
-			FD_SET(pair.first, &readfds);
+			FD_SET(pair.second->getSocket(), &readfds); 
 		}
 		// build write set only for clients with pending outgoing messages
 		for (auto &[socket, client] : clients)
 		{
-			if (!client.getOutBuffer().empty())
+			if (!client->getOutBuffer().empty())
 			{
 				FD_SET(socket, &writefds);
 			}
@@ -96,7 +100,7 @@ void Gut::Server::pushTask(std::unique_ptr<Task> task)
 		std::lock_guard<std::mutex> lock(taskMutex);
 		taskQueue.push(std::move(task));
 	} // mutex releases automatically
-	std::cout << "New task from client ID: " << task->getClient().credentials.userId << std::endl;
+	std::cout << "New task from client: " << task->getClient()->getSocket() << std::endl;
 	taskCV.notify_one();
 }
 
@@ -106,11 +110,11 @@ void Gut::Server::sendResponses(fd_set &writefds)
 	proccesOutMessages();
 	for (auto it = clients.begin(); it != clients.end();)
 	{
-		Client &client = it->second;
+		std::shared_ptr<Client> client_ptr = it->second;
 
-		if (FD_ISSET(client.getSocket(), &writefds))
+		if (FD_ISSET(client_ptr->getSocket(), &writefds))
 		{
-			if (!flushClient(client))
+			if (!flushClient(client_ptr)) 
 			{
 				// client has network problem, it's his problem not the server's );
 				it = kick(it);
@@ -121,25 +125,24 @@ void Gut::Server::sendResponses(fd_set &writefds)
 	}
 }
 
-bool Gut::Server::flushClient(Client &client)
+bool Gut::Server::flushClient(std::shared_ptr<Client> client_ptr) 
 {
-
 	// client has nothing to send so ecerything is ok
-	if (client.getOutBuffer().empty())
+	if (client_ptr->getOutBuffer().empty())
 		return true;
 
 	// initiate send
 	int sent = send(
-		client.getSocket(),
-		client.getOutBuffer().data(),
-		(int)client.getOutBuffer().size(),
+		client_ptr->getSocket(),
+		client_ptr->getOutBuffer().data(),
+		(int)client_ptr->getOutBuffer().size(),
 		0);
 
 	// check status of sent
 	if (sent > 0)
 	{
 		// remove the first [sent] characters
-		client.popOutBuffer(sent);
+		client_ptr->popOutBuffer(sent);
 		return true;
 	}
 
@@ -172,8 +175,8 @@ void Gut::Server::proccesOutMessages()
 		try{
 			if (it != clients.end())
 			{
-				MessageCodec::encode(msg, it->second); //encrypts the message nad frames it according to protocol
-				it->second.pushOutBuffer(msg.getContent());
+				MessageCodec::encode(msg, *it->second); 
+				it->second->pushOutBuffer(msg.getContent()); 
 			}
 		}catch(std::runtime_error e){
 			//client's keys are corrupted
@@ -198,9 +201,9 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 				String msg = serverSocket->receive(clientSocket);
 				if (msg.length() > 0)
 				{
-					client.pushInBuffer(msg);
+					client->pushInBuffer(msg);
 				}
-				const String &clientBuffer = client.getInBuffer();
+				const String &clientBuffer = client->getInBuffer();
 				while (clientBuffer.length() >= 4)
 				{
 					uint32_t msgLength;
@@ -215,32 +218,31 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 					msg = clientBuffer.substr(4, msgLength);
 					//decode the message
 					Message message(msg, clientSocket);
-					MessageCodec::decode(message, client);
-					// add task
-					pushTask(std::move(TaskFactory::createTask(std::move(message), client)));
+					MessageCodec::decode(message, *client);
+					
+					pushTask(std::move(TaskFactory::createTask(std::move(message), *client)));
 					
 					// remove the extracted message from buffer
-					client.popOutBuffer(4 + msgLength);
+					client->popOutBuffer(4 + msgLength);
 				}
 			}
 			catch (int err)
 			{
-				if (err = WSAECONNRESET || err == WSAENOTCONN || err == WSAESHUTDOWN)
+				if (err == WSAECONNRESET || err == WSAENOTCONN || err == WSAESHUTDOWN)
 				{
-					kick(client);
+					kick(client); 
 				}
 			}
 			catch(std::runtime_error err){
-				kick(client);
+				kick(client); 
 			}
 		}
 	}
 }
 
-Gut::ClientSet::iterator Gut::Server::kick(ClientSet::iterator it)
+Gut::ClientSet::iterator Gut::Server::kick(Gut::ClientSet::iterator it)
 {
-	Client &client = it->second;
-	SOCKET sock = client.getSocket();
+	SOCKET sock = it->second->getSocket(); 
 
 	// Close the socket
 	closesocket(sock);
@@ -249,10 +251,9 @@ Gut::ClientSet::iterator Gut::Server::kick(ClientSet::iterator it)
 	return clients.erase(it);
 }
 
-void Gut::Server::kick(Client &client)
+void Gut::Server::kick(std::shared_ptr<Client> client_ptr)
 {
-
-	SOCKET sock = client.getSocket();
+	SOCKET sock = client_ptr->getSocket();
 
 	// Close socket
 	closesocket(sock);
@@ -261,21 +262,21 @@ void Gut::Server::kick(Client &client)
 	clients.erase(sock);
 }
 
-Gut::Client& Gut::Server::getClient(SOCKET socket) {
-    auto it = clients.find(socket);
+std::shared_ptr<Gut::Client> Gut::Server::getClient(SOCKET socket) {
+	auto it = clients.find(socket);
 
-    if (it == clients.end()) {
-        //checks if client exists
-        throw CLIENTNOTFOUND;
-    }
+	if (it == clients.end()) {
+		// checks if client exists
+		throw std::runtime_error("CLIENTNOTFOUND"); 
+	}
 
-    return it->second; //Returns the Gut::Client&
+	return it->second;
 }
 
 void Gut::Server::acceptClients() {
 	SOCKET socket;
 	while((socket = serverSocket->accept()) != INVALID_SOCKET){
-		clients.emplace(socket, Client{socket});
+		clients.emplace(socket, std::make_shared<Client>(socket)); 
 	}
 	if(socket != WSAEWOULDBLOCK) {
 		std::cout << WSAGetLastError() << std::endl;

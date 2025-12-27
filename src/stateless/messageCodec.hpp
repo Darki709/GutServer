@@ -17,11 +17,6 @@ namespace Gut
 	};
 
 	// constant flags that are used to define the message type
-	enum class MsgType : uint8_t
-	{
-		HANDSHAKEVERIFY,
-	};
-
 	enum class Flags : uint8_t
 	{
 		PLAIN_TEXT = 0,

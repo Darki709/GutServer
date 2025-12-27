@@ -9,7 +9,7 @@ Gut::AESGCM::~AESGCM()
 }
 
 // initialize the cipher context with a key
-void Gut::AESGCM::init(const SessionKey &key)
+void Gut::AESGCM::init(SessionKey &key)
 {
 	this->key = key;
 	if (ctx)
@@ -102,4 +102,8 @@ bool Gut::AESGCM::decrypt(
 	outlen += tmplen;
 	out.resize(outlen);
 	return true;
+}
+
+Gut::SessionKey& Gut::AESGCM::getKey(){
+	return key;
 }

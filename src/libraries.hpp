@@ -29,6 +29,7 @@ namespace Gut {
 
 	enum Errors{
 		CLIENTNOTFOUND,
+		HANDSHAKEFAILURE,
 	};
 }
 

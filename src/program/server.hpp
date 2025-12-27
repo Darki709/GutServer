@@ -17,7 +17,7 @@
 
 namespace Gut {
 
-	typedef std::unordered_map<SOCKET, Client> ClientSet;
+	typedef std::unordered_map<SOCKET, std::shared_ptr<Client>> ClientSet;
 	class Server {
 	private: 
 		TcpSocket* serverSocket;
@@ -47,9 +47,9 @@ namespace Gut {
 		//appends outgoing messages to clients OutBuffers
 		void proccesOutMessages();
 		//flush the client buffer (as much as os allows)
-		bool flushClient(Client& client);
+		bool flushClient(std::shared_ptr<Client> client);
 		//kick a client out
-		void kick(Client& client);
+		void kick(std::shared_ptr<Client> client);
 		ClientSet::iterator kick(ClientSet::iterator it);
 
 
@@ -57,7 +57,7 @@ namespace Gut {
 
 		static Server& getInstance(); //singleton contructor
 		
-		Client& getClient(SOCKET socket);
+		std::shared_ptr<Client> getClient(SOCKET socket);
 
 		Server();
 		~Server();
