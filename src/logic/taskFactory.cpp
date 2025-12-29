@@ -3,9 +3,9 @@
 #include "taskFactory.hpp"
 #include "../runtime/client.hpp"
 
-std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, Client &client)
+std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::shared_ptr<Client>& client)
 {
-	String content = message.getContent();
+	String& content = message.getContent();
 
 	//extract task type
 	uint8_t taskType;
@@ -17,12 +17,14 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, Client 
 	memcpy(&reqId, content.data(), 4);
 	content.erase(0, 4);
 
+	std::cout << static_cast<int>(taskType) << std::endl;
+
 	//switch on task type
-	switch ((int)taskType)
+	switch (static_cast<int>(taskType))
 	{
-	case (int)TaskType::HANDSHAKEHELLO:
+	case static_cast<int>(TaskType::HANDSHAKEHELLO):
 		return std::make_unique<HandShakeHello>(client, content);
-	case (int)TaskType::HANDSHAKEVERIFY:
+	case static_cast<int>(TaskType::HANDSHAKEVERIFY):
 		return std::make_unique<HandShakeVerify>(client, content);
 	default:
 		return nullptr;

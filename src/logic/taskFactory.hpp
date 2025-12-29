@@ -5,6 +5,6 @@
 namespace Gut{
 	class TaskFactory{
 		public:
-			static std::unique_ptr<Task> createTask(Message message, Client& client);
+			static std::unique_ptr<Task> createTask(Message message, std::shared_ptr<Client>& client);
 	};
 }

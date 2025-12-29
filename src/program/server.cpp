@@ -112,9 +112,8 @@ void Gut::Server::pushTask(std::unique_ptr<Task> task)
 {
 	{
 		std::lock_guard<std::mutex> lock(taskMutex);
-		taskQueue.push(std::move(task));
+		if(task != nullptr) taskQueue.push(std::move(task));
 	} // mutex releases automatically
-	std::cout << "New task from client: " << task->getClient()->getSocket() << std::endl;
 	taskCV.notify_one();
 }
 
@@ -214,7 +213,6 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 		{
 			try
 			{
-				std::cout << "starting recv" << std::endl;
 				String raw = serverSocket->receive(socket);
 				std::cout << raw << std::endl;
 				if (raw.length() > 0)
@@ -243,9 +241,10 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 
 					std::cout << "[CRYPTO] Attempting Decode..." << std::endl;
 					MessageCodec::decode(message, *client);
-					std::cout << "[CRYPTO] Decode Successful." << std::endl;
+					std::cout << "[CRYPTO] Decode Successful." << message.getContent() << std::endl;
 
-					pushTask(TaskFactory::createTask(std::move(message), *client));
+					pushTask(TaskFactory::createTask(std::move(message), client));
+					std::cout << "New task from client: " << client->getSocket() << std::endl;
 
 					client->popInBuffer(4 + len);
 				}

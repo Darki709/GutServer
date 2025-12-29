@@ -3,8 +3,10 @@
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 
-Gut::HandShakeHello::HandShakeHello(Client &client, String clientpublickey)
-	: Task(client), clientPublicKey(std::move(clientpublickey)) {}
+Gut::HandShakeHello::HandShakeHello(std::shared_ptr<Client>& client, String clientpublickey)
+	: Task(client), clientPublicKey(std::move(clientpublickey)) {
+		std::cout << "handshakehello started" << std::endl;
+	}
 
 std::optional<Gut::Message> Gut::HandShakeHello::execute()
 {
@@ -53,6 +55,7 @@ std::optional<Gut::Message> Gut::HandShakeHello::execute()
 	content.push_back(static_cast<char>(MsgType::HANDSHAKEVERIFY));
 	//append encrypted key
 	content.append(reinterpret_cast<const char*>(encryptedKey.data()), len);
+	std::cout << content << std::endl;
 	Message message(std::move(content), client->getSocket());
 	return message;
 }

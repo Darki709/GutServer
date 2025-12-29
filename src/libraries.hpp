@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <optional>
 #include <array>
+#include <cassert>
 
 
 namespace Gut {

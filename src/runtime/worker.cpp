@@ -25,6 +25,7 @@ namespace Gut
 		{
 			// BLOCKS until task OR shutdown
 			std::unique_ptr<Task> task = server->popTask();
+			std::cout << "new task is being proccessed" << std::endl;
 
 			if (!task)
 				return; // server shutting down

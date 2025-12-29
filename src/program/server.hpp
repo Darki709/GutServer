@@ -53,7 +53,7 @@ namespace Gut {
 		//safe access to the message queue
 		std::mutex messageMutex;
 
-		bool running{true};
+		std::atomic<bool> running{true};
 	public:
 
 		static Server& getInstance(); //singleton contructor

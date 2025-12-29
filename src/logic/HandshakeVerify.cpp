@@ -2,7 +2,7 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
-Gut::HandShakeVerify::HandShakeVerify(Client& client, String encryptedMessage)
+Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, String encryptedMessage)
     : Task(client), encryptedMessage(std::move(encryptedMessage)) {}
 
 std::optional<Gut::Message> Gut::HandShakeVerify::execute(){

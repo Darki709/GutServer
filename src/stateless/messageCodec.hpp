@@ -5,6 +5,8 @@
 
 namespace Gut
 {
+	void debugOutgoingMessage(const std::string& data);
+
 	class Client;
 
 	class MessageCodec

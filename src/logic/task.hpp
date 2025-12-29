@@ -19,7 +19,7 @@ namespace Gut
 		FORBIDDEN,
 	};
 
-	enum class TaskType : uint8_t
+	enum class TaskType : int
 	{
 		HANDSHAKEHELLO,
 		HANDSHAKEVERIFY,
@@ -35,7 +35,7 @@ namespace Gut
 		std::weak_ptr<Client> client;
 
 	public:
-		Task(Client& client);
+		Task(std::shared_ptr<Client>& client);
 		virtual ~Task() = default;
 		std::shared_ptr<Gut::Client> getClient();
 		//instructions for the task

@@ -72,13 +72,11 @@ int Gut::TcpSocket::send(SOCKET client, const String& message) {
 std::string Gut::TcpSocket::receive(SOCKET client) {
 	char buffer[4096];
 	int bytesReceived = ::recv(client, buffer, sizeof(buffer) - 1, 0);
-	std::cout << "finished recv" << std::endl;
 	if (bytesReceived == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 		std::cout << "recv failed: " << err << std::endl;
 		throw err;
 	}
-	std::cout << "[RECV SUCCESS] Bytes read: " << bytesReceived << std::endl;
     if (bytesReceived > 0) {
         // Log the first few bytes in hex to see if they are 00 00 ...
         printf("RAW BYTES: %02X %02X %02X %02X\n", 
