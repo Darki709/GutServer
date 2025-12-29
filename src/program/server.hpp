@@ -17,7 +17,10 @@
 
 namespace Gut {
 
+	void printRawMessage(const std::string& content);
+
 	typedef std::unordered_map<SOCKET, std::shared_ptr<Client>> ClientSet;
+	
 	class Server {
 	private: 
 		TcpSocket* serverSocket;

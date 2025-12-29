@@ -25,21 +25,27 @@ namespace Gut
 		{
 			// BLOCKS until task OR shutdown
 			std::unique_ptr<Task> task = server->popTask();
-			std::cout << "new task is being proccessed" << std::endl;
 
 			if (!task)
 				return; // server shutting down
 
 			try
 			{
+				std::cout << "new task is being proccessed" << std::endl;
 				std::optional<Message> result = task->execute();
 				if(result)
 					server->addMessage(std::move(result.value()));
 			}
-			catch (...)
+			catch (Errors err)
 			{
 				// task failed, worker lives
-				std::cout << "Worker: task execution failed" << std::endl;
+				std::cout << "Worker: task execution failed: Errors-" << err << std::endl;
+			}
+			catch(std::runtime_error err){
+				std::cout << "Worker: task execution failed" << err.what() << std::endl;
+			}
+			catch(...){
+				std::cout << "Worker: task execution failed due to unknown bug" << std::endl;
 			}
 		}
 	}

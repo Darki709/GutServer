@@ -17,13 +17,13 @@ void encrypt(Gut::String& content, Gut::Client& client){
 //message should already come with msg type and content
 void Gut::MessageCodec::encode(Message& msg, Client& client){
 	char8_t isEncrypted = 0;
+	String& content = msg.getContent();
 	//checks if client's messages should be encrypted
-	if((int)client.getState() > 1){
-		encrypt(msg.getContent(), client);
+	if(static_cast<int>(client.getState()) > 1){
+		encrypt(content, client);
 		isEncrypted = 1;
 	}
-
-	String& content = msg.getContent();
+	
     uint32_t len = htonl((uint32_t)content.size() + 1); //take into account the isEncrypted length
 
     String framed;
@@ -64,7 +64,6 @@ void Gut::MessageCodec::decode(Message& msg, Client& client){
 	//checks for a combinatin of either client that should have necrypted messages with flag set to encrypted
 	//or a client with no encryption that has a no encryption flag any other combination is invalid and kicked
 	std::cout << flag << std::endl;
-	std::cout << content << std::endl;
 	if(flag == 1){
 		if((int)client.getState() > 1){
 			decrypt(msg.getContent(), client);
@@ -106,13 +105,8 @@ void Gut::debugOutgoingMessage(const std::string& data) {
     std::cout << "Flag / IsEncrypted: 0x" << std::hex << std::setw(2) << std::setfill('0')
               << static_cast<int>(flag) << std::dec << " (" << static_cast<int>(flag) << ")" << std::endl;
 
-    // Message type
-    uint8_t msgType = static_cast<uint8_t>(data[5]);
-    std::cout << "Message Type: 0x" << std::hex << std::setw(2) << std::setfill('0')
-              << static_cast<int>(msgType) << std::dec << " (" << static_cast<int>(msgType) << ")" << std::endl;
-
     // Payload
-    std::string payload = data.substr(6);
+    std::string payload = data.substr(5);
     std::cout << "Payload length: " << payload.size() << " bytes" << std::endl;
 
     // Print payload in hex + ASCII

@@ -1,9 +1,12 @@
 #include "HandshakeVerify.hpp"
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <iomanip>
 
 Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, String encryptedMessage)
-    : Task(client), encryptedMessage(std::move(encryptedMessage)) {}
+    : Task(client), encryptedMessage(std::move(encryptedMessage)) {
+		std::cout << "handshakeverify started" << std::endl;
+	}
 
 std::optional<Gut::Message> Gut::HandShakeVerify::execute(){
 	std::shared_ptr<Client> client;
@@ -13,6 +16,12 @@ std::optional<Gut::Message> Gut::HandShakeVerify::execute(){
 
 	AESGCM& cipher = client->getCipher().cipher;
     auto& key = cipher.getKey(); // raw 32-byte AES key
+	for (auto b : key)
+	{
+		std::cout << std::hex << std::setw(2) << std::setfill('0')
+				  << static_cast<int>(b) << " ";
+	}
+	std::cout << std::endl;
 
     // 1. Prepare OpenSSL context for AES-256-ECB
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();

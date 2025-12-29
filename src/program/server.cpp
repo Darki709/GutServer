@@ -235,16 +235,20 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 						break;
 					}
 
+
 					//removes the length bytes before creating the message
 					String msgContent = client->getInBuffer().substr(4, len);
 					Message message(msgContent, socket);
 
+					printRawMessage(msgContent);
+
 					std::cout << "[CRYPTO] Attempting Decode..." << std::endl;
 					MessageCodec::decode(message, *client);
-					std::cout << "[CRYPTO] Decode Successful." << message.getContent() << std::endl;
+					std::cout << "[CRYPTO] Decode Successful." << std::endl;
+					printRawMessage(message.getContent());
 
 					pushTask(TaskFactory::createTask(std::move(message), client));
-					std::cout << "New task from client: " << client->getSocket() << std::endl;
+					std::cout << "New task from client: " << socket << std::endl;
 
 					client->popInBuffer(4 + len);
 				}
@@ -339,4 +343,13 @@ bool Gut::Server::taskQueueEmpty()
 {
 	std::lock_guard<std::mutex> lock(taskMutex);
 	return taskQueue.empty();
+}
+
+void Gut::printRawMessage(const std::string& content) {
+    std::cout << "Raw message (" << content.size() << " bytes): ";
+    for (unsigned char c : content) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<int>(c) << " ";
+    }
+    std::cout << std::dec << std::endl; // back to decimal
 }

@@ -19,6 +19,7 @@
 #include <optional>
 #include <array>
 #include <cassert>
+#include <iomanip>
 
 
 namespace Gut {
