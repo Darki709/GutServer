@@ -66,6 +66,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		// load price data from api, if nothig was thrown in means the fetch is ok,
 		// errors at execution are handled by the worker
 		Stock_helper::getInstance().fetchLiveData(symbol, static_cast<int>(interval));
+		
 
 		// read data from database
 
@@ -191,7 +192,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 	// check if user wants to sign up for streaming
 	if (stream)
 	{
-		// implement after testing snapshot
+		
 	}
 
 	// this execute sends the messages by itself

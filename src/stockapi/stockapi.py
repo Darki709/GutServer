@@ -28,6 +28,7 @@ def fetch_live_data(ticker,  interval ):
 			return -1
 	if insert_price_data(ticker, interval, data) == -1:
 		return -2	
+	return len(data) if data is not None else 0
 
 
 
