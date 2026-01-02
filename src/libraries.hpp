@@ -38,12 +38,13 @@ namespace Gut
 	};
 
 	template <typename T>
-	static void append_bytes(std::string &out, const T &value)
+	inline static void append_bytes(std::string &out, const T &value)
 	{
+		std::cout << "appending " << sizeof(T) << std::endl;
 		out.append(reinterpret_cast<const char *>(&value), sizeof(T));
 	}
 
-	void append_double(String &s, double v)
+	inline void append_double(String &s, double v)
 	{
 		uint64_t tmp;
 		static_assert(sizeof(double) == 8);

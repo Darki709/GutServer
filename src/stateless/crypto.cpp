@@ -36,7 +36,8 @@ bool Gut::AESGCM::encrypt(
 
 	// Create 12-byte IV: 4 bytes zeros + 8-byte nonce
 	std::array<uint8_t, 12> iv{};
-	memcpy(iv.data() + 4, &nonce, sizeof(nonce));
+	uint64_t be_nonce = htonll(nonce);
+	memcpy(iv.data() + 4, &be_nonce, sizeof(be_nonce));
 
 	if (!EVP_EncryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data()))
 		return false;
@@ -57,7 +58,8 @@ bool Gut::AESGCM::encrypt(
 	std::array<uint8_t, 16> tag{};
 	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag.data()))
 		return false;
-
+	//std::cout << "aes key " << key.data() << std::endl;
+	//std::cout << tag.data() << std::endl;
 	out.insert(out.end(), tag.begin(), tag.end());
 	return true;
 }
@@ -80,7 +82,8 @@ bool Gut::AESGCM::decrypt(
 		return false;
 
 	std::array<uint8_t, 12> iv{};
-	memcpy(iv.data() + 4, &nonce, sizeof(nonce));
+	uint64_t be_nonce = htonll(nonce);
+	memcpy(iv.data() + 4, &be_nonce, sizeof(be_nonce));
 
 	if (!EVP_DecryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data()))
 		return false;

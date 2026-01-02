@@ -4,7 +4,7 @@ import os
 
 
 BASE_DIR = os.path.dirname(__file__)  # folder where fetchdb.py lives
-DB_DIR = os.path.join(BASE_DIR, "../../build", "database")  # + build
+DB_DIR = os.path.join(BASE_DIR, "../../", "database")  # + build
 os.makedirs(DB_DIR, exist_ok=True)  # make sure folder exists
 DB_PATH = os.path.join(DB_DIR, "stock_data.db")
 

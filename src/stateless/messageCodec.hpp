@@ -19,7 +19,7 @@ namespace Gut
 	};
 
 	// constant flags that are used to define the message type
-	enum class Flags : uint8_t
+	enum class Format : uint8_t
 	{
 		PLAIN_TEXT = 0,
 		ENCRYPTED = 1

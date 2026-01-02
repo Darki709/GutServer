@@ -7,7 +7,8 @@ void encrypt(Gut::String& content, Gut::Client& client){
 	const uint8_t* plainText = reinterpret_cast<const uint8_t*>(content.data());
 	std::vector<uint8_t> out;
 	if(client.getCipher().cipher.encrypt(client.getCipher().sendNonce, plainText, content.size(), out)){
-		client.getCipher().sendNonce++;
+		int nonce = client.getCipher().sendNonce++;
+		std::cout << "encryptin outgoing data" << nonce <<std::endl;
 		content.assign(out.begin(), out.end()); //set the encrypted text as the content of the message;
 	}
 	else throw std::runtime_error("encryption failed");
@@ -37,7 +38,7 @@ void Gut::MessageCodec::encode(Message& msg, Client& client){
 	//set the new framed message as the content of the message object
     content = framed;
 
-	Gut::debugOutgoingMessage(framed);
+	//Gut::debugOutgoingMessage(framed);
 }
 
 //decrypts the message

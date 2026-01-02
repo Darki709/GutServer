@@ -9,6 +9,7 @@ namespace Gut
 	{
 		HANDSHAKEVERIFY,
 		HANDSHAKESUCCESS,
+		SNAPSHOT,
 	};
 	
 	class Message

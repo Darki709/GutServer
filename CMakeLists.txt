@@ -77,3 +77,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 	"C:/Program Files/OpenSSL-Win64/bin/libcrypto-3-x64.dll"
 	$<TARGET_FILE_DIR:${PROJECT_NAME}>)
+add_custom_command(TARGET gutweb POST_BUILD
+    # Create the __init__.py file if it doesn't exist
+    COMMAND ${CMAKE_COMMAND} -E touch $<TARGET_FILE_DIR:gutweb>/stockapi/__init__.py
+    # Copy your existing scripts
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/src/stockapi
+    $<TARGET_FILE_DIR:gutweb>/stockapi
+)

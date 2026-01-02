@@ -69,10 +69,16 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 
 		// read data from database
 
+		std::cout << "finished api call" << std::endl;
 		// get db path
-		std::filesystem::path exeDir = std::filesystem::current_path();
-		std::filesystem::path dbPath = exeDir / ".." / "database" / "stock_data.db";
-		String db_path = std::filesystem::absolute(dbPath).string();
+		wchar_t path[MAX_PATH];
+		GetModuleFileNameW(NULL, path, MAX_PATH);
+		std::filesystem::path exePath(path);
+		std::filesystem::path exeDir = exePath.parent_path(); // This is build/Debug/
+		std::filesystem::path dbPath = exeDir.parent_path() / "database" / "stock_data.db"; // Move up one level from Debug to build, then into database
+		std::string db_path = dbPath.string();
+
+		std::cout << "db path: " << db_path << std::endl;
 
 		// connect to db
 		sqlite3 *db;
@@ -82,7 +88,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		{
 			throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
 		}
-
+		std::cout << "conected to db" << std::endl;
 		const char *sql = R"(
         SELECT date, open, high, low, close, volume
         FROM price_history
@@ -141,7 +147,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 				double low = sqlite3_column_double(stmt, 3);
 				double close = sqlite3_column_double(stmt, 4);
 				int64_t volume = sqlite3_column_int64(stmt, 5);
-				data.push_back(PriceData{date, open, close, low, high, volume});
+				data.push_back(PriceData{static_cast<uint64_t>(date), open, close, low, high, static_cast<uint64_t>(volume)});
 			}
 		}
 		catch (...)
@@ -155,10 +161,14 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 
 		int count = 0;
 		// send messages to the client
+		std::shared_ptr<Client> client = Task::getClient();
+		SOCKET socket;
+		if(client) socket = client->getSocket();
 		while (count < data.size())
 		{
 			String content;
-			uint16_t candle_count = static_cast<uint16_t>(std::min<size_t>(255, data.size() - count));
+			uint16_t candle_count = static_cast<uint16_t>(std::min<size_t>(256, data.size() - count));
+			std::cout << candle_count << std::endl;
 			content.reserve(8 + candle_count * 48); // preallocate the string 8 is number of header bytes and candles is the number of candles (out of 255 max per message) times 48 bytes per candle
 			content.push_back(static_cast<char>(MsgType::SNAPSHOT));
 			uint32_t req = htonl(Task::getReqId());
@@ -166,12 +176,15 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 			content.push_back((data.size() - count) <= 255 ? 1 : 0);
 			append_bytes(content, candle_count);
 			for (uint16_t i = 0; i < candle_count; ++i)
-			{
-				append_bytes(content, data[count].messageFormat());
+			{	
+				String row = data[count].messageFormat();
+				std::cout << row.size() << std::endl;
+				content.append(row.data(), row.size());
 				++count;
 			}
+			std::cout << content.size() << std::endl;
 			Server *server = Task::getServer();
-			server->addMessage(Message{content, Task::getClient()->getSocket()});
+			server->addMessage(Message{content,socket});
 		}
 	}
 
@@ -200,5 +213,3 @@ Gut::String Gut::PriceData::messageFormat()
 	append_bytes(content, htonll(volume));
 	return content;
 }
-
-

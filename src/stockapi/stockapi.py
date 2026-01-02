@@ -1,6 +1,6 @@
 import yfinance as yf
 import pandas as pd
-from fetchdb import *
+from .fetchdb import *
 
 
 INTERVAL_MAP = {
