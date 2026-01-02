@@ -7,16 +7,12 @@
 
 namespace Gut
 {
+	class Server;
+
 	struct AssignedClient{
 		SOCKET client;
 		ClientState state;
 		AuthContext credentials;
-	};
-
-	enum class ExecutionCode
-	{
-		SERVERERROR,
-		FORBIDDEN,
 	};
 
 	enum class TaskType : int
@@ -25,19 +21,24 @@ namespace Gut
 		HANDSHAKEVERIFY,
 		LOGIN,
 		REGISTER,
-		PRICE_REQUEST,
-		PRICE_STREAM,
+		REQUESTTICKERDATA,
+		CANCELTICKERSTREAM,
 	};
 	
 	class Task
 	{
 	private:
 		std::weak_ptr<Client> client;
+		uint32_t reqId;
+		Server* server;
 
 	public:
-		Task(std::shared_ptr<Client>& client);
+		Task(std::shared_ptr<Client>& client, uint64_t reqId);
 		virtual ~Task() = default;
 		std::shared_ptr<Gut::Client> getClient();
+		uint32_t getReqId();
+		Server* getServer();
+		void setServer(Server* server);
 		//instructions for the task
 		virtual std::optional<Message> execute() = 0;
 	};

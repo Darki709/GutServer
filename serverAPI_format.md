@@ -68,3 +68,184 @@
     - Payload: optional
     - Flag: encrypted (0x01)
     - recv_nonce incremented
+
+
+# Price Data Request Format
+
+**Task Type:** `4` (Tasktype::REQUESTTICKERDATA)
+
+This request is sent by a client to retrieve historical or streaming price data for a given ticker symbol.
+
+---
+
+## Payload Structure
+
+| Offset | Size (bytes) | Field        | Description |
+|--------|--------------|--------------|-------------|
+| 0      | 1            | `symbolLen`  | Length of the ticker symbol (max 255). |
+| 1      | `symbolLen`  | `symbol`     | ASCII string representing the ticker symbol (e.g., `"AAPL"`). |
+| ?      | 4            | `interval`   | Time interval of the candles, `uint32_t`. Valid values:  
+|        |              |              | - `60` → 1 minute (`Interval::MIN_1`)  
+|        |              |              | - `300` → 5 minutes (`Interval::MIN_5`)  
+|        |              |              | - `900` → 15 minutes (`Interval::MIN_15`)  
+|        |              |              | - `3600` → 1 hour (`Interval::HOUR_1`)  
+|        |              |              | - `86400` → 1 day (`Interval::DAY_1`) |
+| ?      | 8            | `start_ts`   | Start timestamp (seconds since Unix epoch, `uint64_t`). |
+| ?      | 8            | `end_ts`     | End timestamp (seconds since Unix epoch, `uint64_t`). |
+| ?      | 1            | `flags`      | Bitwise flags (`uint8_t`) specifying request options:  
+|        |              |              | - `0x01` → `SNAPSHOT` (historical snapshot)  
+|        |              |              | - `0x02` → `STREAM` (live streaming feed)  
+
+---
+
+## Notes
+
+- `interval` determines the granularity of returned candlestick data.
+- `start_ts` and `end_ts` define the range for historical data.
+- Flags can be combined (e.g., `SNAPSHOT | STREAM`).
+- Client privileges are checked; insufficient privileges result in `ILLEGALACCESS`.
+- Invalid intervals will result in `INVALIDREQUEST`.
+
+---
+
+## Example
+
+Request 5-minute candles for `"AAPL"` from `1 Jan 2026 00:00:00 UTC` to `2 Jan 2026 00:00:00 UTC` as a snapshot:
+
+| Field       | Value                      |
+|-------------|----------------------------|
+| `symbolLen` | `4`                        |
+| `symbol`    | `"AAPL"`                   |
+| `interval`  | `300`                      |
+| `start_ts`  | `1767225600`               |
+| `end_ts`    | `1767312000`               |
+| `flags`     | `0x01` (`SNAPSHOT`)        |
+
+---
+
+## Byte Layout Diagram
+
++---------+----------------+--------------------+
+| Offset | Field | Notes |
++---------+----------------+--------------------+
+| 0 | symbolLen | 1 byte |
+| 1 | symbol | symbolLen bytes |
+| ? | interval | 4 bytes, uint32_t |
+| ? | start_ts | 8 bytes, uint64_t |
+| ? | end_ts | 8 bytes, uint64_t |
+| ? | flags | 1 byte |
++---------+----------------+--------------------+
+
+# Price Data Response Message Format
+
+This document defines the **server → client** message format used to deliver price (candle) data in response to a price data request.
+
+The format follows the **core Gut protocol rules**: fixed binary layout, no delimiters, no text encoding.
+
+---
+
+## Message Overview
+
+Each response message contains **one chunk** of candle data.  
+Large datasets are split across **multiple messages**.
+
+┌──────────┬──────────────┬──────────┬──────────┬─────────┬──────────────┬──────────────┐
+│ Length │ Encrypted │ MsgType │ ReqID │ IsLast │ CandleCount │ Candle Data │
+└──────────┴──────────────┴──────────┴──────────┴─────────┴──────────────┴──────────────┘
+
+
+---
+
+## Header Fields
+
+### 1. Length
+- **Size:** 4 bytes (uint32)
+- **Description:** Total message length in bytes (including header)
+- **Byte order:** Network (big endian)
+
+---
+
+### 2. Encrypted
+- **Size:** 1 byte
+- **Values:**
+  - `0x00` – plaintext
+  - `0x01` – encrypted
+
+---
+
+### 3. MsgType
+- **Size:** 1 byte
+- **Value:** `0x04`
+- **Description:** Price Data Response
+
+---
+
+### 4. ReqID
+- **Size:** 4 bytes (uint32)
+- **Description:** Request ID of the original price data request
+- **Byte order:** Network (big endian)
+
+---
+
+### 5. IsLast
+- **Size:** 1 byte
+- **Values:**
+  - `0x00` – more messages will follow
+  - `0x01` – this is the final message for this request
+- **Purpose:** Allows the client to detect completion and handle retransmission on timeout
+
+---
+
+### 6. CandleCount
+- **Size:** 2 bytes (uint16)
+- **Description:** Number of candles contained in this message
+- **Maximum recommended:** `256`
+- **Byte order:** Network (big endian)
+
+---
+
+## Candle Data Section
+
+Immediately follows the header.  
+Candles are packed **back-to-back** with no separators.
+
+---
+
+## Candle Format (48 bytes each)
+
+┌────────────┬──────┬──────┬──────┬──────┬────────┐
+│ Timestamp │ Open │ High │ Low │ Close│ Volume │
+└────────────┴──────┴──────┴──────┴──────┴────────┘
+
+### Fields
+
+| Field      | Size | Type     | Description                          |
+|-----------|------|----------|--------------------------------------|
+| Timestamp | 8    | uint64   | Unix timestamp (seconds, UTC)        |
+| Open      | 8    | double   | Opening price                        |
+| High      | 8    | double   | Highest price                        |
+| Low       | 8    | double   | Lowest price                         |
+| Close     | 8    | double   | Closing price                        |
+| Volume    | 8    | uint64   | Trade volume                         |
+
+- Timestamp and Volume are **network byte order**
+- Doubles are sent as raw IEEE-754 (both sides must agree on endianness)
+
+---
+
+## Message Chunking Rules
+
+- Large datasets **must** be split into multiple messages
+- Each message carries its own `CandleCount`
+- `IsLast = 1` only on the final chunk
+- Client assumes failure if `IsLast` is not received within timeout
+
+---
+
+## Parsing Notes (Client)
+
+- Read fixed header first
+- Allocate `CandleCount × 48` bytes
+- Parse candles using fixed offsets
+- No dynamic field lengths
+- No delimiters

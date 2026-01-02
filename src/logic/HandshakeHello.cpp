@@ -4,8 +4,8 @@
 #include <openssl/rand.h>
 
 
-Gut::HandShakeHello::HandShakeHello(std::shared_ptr<Client> &client, String clientpublickey)
-	: Task(client), clientPublicKey(std::move(clientpublickey))
+Gut::HandShakeHello::HandShakeHello(std::shared_ptr<Client> &client, uint64_t reqId  , String clientpublickey)
+	: Task(client, reqId), clientPublicKey(std::move(clientpublickey))
 {
 	std::cout << "handshakehello started" << std::endl;
 }

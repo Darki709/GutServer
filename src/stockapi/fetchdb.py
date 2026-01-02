@@ -4,7 +4,7 @@ import os
 
 
 BASE_DIR = os.path.dirname(__file__)  # folder where fetchdb.py lives
-DB_DIR = os.path.join(BASE_DIR, "..", "build")  # parent folder + build
+DB_DIR = os.path.join(BASE_DIR, "../../build", "database")  # + build
 os.makedirs(DB_DIR, exist_ok=True)  # make sure folder exists
 DB_PATH = os.path.join(DB_DIR, "stock_data.db")
 
@@ -28,7 +28,7 @@ def price_history_create():
 	c.execute('''CREATE TABLE IF NOT EXISTS price_history
 				 (ticker TEXT,
 		   		  interval TEXT,
-				  date DATETIME NOT NULL,
+				  date INTEGER NOT NULL,
 				  open REAL,
 				  high REAL,
 				  low REAL,
@@ -41,7 +41,8 @@ def price_history_create():
 
 # Function to get the last fetch time to know range for updating data
 def last_fetch_time(ticker, interval):
-	conn = sqlite3.connect(DB_PATH)
+	conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+	conn.execute("PRAGMA journal_mode=WAL;")
 	c = conn.cursor()
 	c.execute('''SELECT fetch_time FROM fetch_history
 				 WHERE ticker = ? AND interval = ?
@@ -56,7 +57,8 @@ def last_fetch_time(ticker, interval):
 		return None
 	
 def update_fetch_time(ticker, interval, fetch_time):
-	conn = sqlite3.connect(DB_PATH)
+	conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+	conn.execute("PRAGMA journal_mode=WAL;")
 	c = conn.cursor()
 	c.execute('''INSERT INTO fetch_history (ticker, interval, fetch_time)
 				VALUES (?, ?, ?) ON CONFLICT(ticker, interval) DO UPDATE SET
@@ -72,14 +74,15 @@ def insert_price_data(ticker, interval, data):
 
     conn = None
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL;")
         c = conn.cursor()
 
         rows = [
             (
                 ticker,
                 interval,
-                row.Index.strftime("%Y-%m-%d %H:%M:%S"),
+                int(row.Index.timestamp()),
                 float(row.Open),
                 float(row.High),
                 float(row.Low),
@@ -116,4 +119,3 @@ def insert_price_data(ticker, interval, data):
     finally:
         if conn:
             conn.close()
-    

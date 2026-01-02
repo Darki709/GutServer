@@ -3,7 +3,7 @@
 #include "../libraries.hpp"
 
 #define LOCAL_HOST "127.0.0.1"
-#define DEFAULT_PORT 4213
+#define DEFAULT_PORT 6767
 
 // Your code here
 namespace Gut{

@@ -21,18 +21,36 @@
 #include <cassert>
 #include <iomanip>
 
-
-namespace Gut {
+namespace Gut
+{
 
 	typedef std::string String;
 	typedef uint32_t UsrID;
 	typedef std::byte EncryptKey;
 	typedef std::array<uint8_t, 32> SessionKey; // AES-256
 
-	enum Errors{
+	enum Errors
+	{
 		CLIENTNOTFOUND,
 		HANDSHAKEFAILURE,
+		ILLEGALACCESS,
+		INVALIDREQUEST,
 	};
+
+	template <typename T>
+	static void append_bytes(std::string &out, const T &value)
+	{
+		out.append(reinterpret_cast<const char *>(&value), sizeof(T));
+	}
+
+	void append_double(String &s, double v)
+	{
+		uint64_t tmp;
+		static_assert(sizeof(double) == 8);
+		memcpy(&tmp, &v, 8);
+		tmp = htonll(tmp);
+		append_bytes(s, tmp);
+	}
 }
 
 #endif

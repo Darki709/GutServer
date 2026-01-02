@@ -299,7 +299,7 @@ std::shared_ptr<Gut::Client> Gut::Server::getClient(SOCKET socket)
 	if (it == clients.end())
 	{
 		// checks if client exists
-		throw std::runtime_error("CLIENTNOTFOUND");
+		throw CLIENTNOTFOUND;
 	}
 
 	return it->second;

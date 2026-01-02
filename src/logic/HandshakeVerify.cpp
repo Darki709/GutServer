@@ -3,8 +3,10 @@
 #include <openssl/err.h>
 #include <iomanip>
 
-Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, String encryptedMessage)
-    : Task(client), encryptedMessage(std::move(encryptedMessage)) {
+Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, uint64_t reqId, String encryptedMessage)
+    : Task(client, reqId), encryptedMessage(std::move(encryptedMessage)) {
+		//check client privileges
+		if(static_cast<int>(client->getState()) < 1) throw Errors::ILLEGALACCESS;
 		std::cout << "handshakeverify started" << std::endl;
 	}
 
@@ -59,10 +61,17 @@ std::optional<Gut::Message> Gut::HandShakeVerify::execute(){
     // 4. Handshake successful → initialize AESGCM nonces for the secure tunnel and sets flags on client object
     client->startTunnel(); 
 
+	//==============================================
+	//temporary bypass of login step for development
+	client->setState(ClientState::AUTHENTICATED);
+	//==============================================
+	//remove when login and register task are completed
+
 
     // 5. Send confirmation message
     String content;
     content.push_back(static_cast<char>(MsgType::HANDSHAKESUCCESS));
+	std::cout << content << std::endl;
     Message msg(std::move(content), client->getSocket());
     return msg;
 }	

@@ -32,6 +32,8 @@ namespace Gut
 			try
 			{
 				std::cout << "new task is being proccessed" << std::endl;
+				//allows tasks to push more then one message
+				task->setServer(server);
 				std::optional<Message> result = task->execute();
 				if(result)
 					server->addMessage(std::move(result.value()));
