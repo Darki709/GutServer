@@ -12,11 +12,11 @@
                 "networksec/tcpSocket.cpp",
                 "networksec/udpSocket.cpp",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "${workspaceFolder}\\gutweb.exe",
                 "-lws2_32"
             ],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
