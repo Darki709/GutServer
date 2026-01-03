@@ -1,8 +1,8 @@
 #include "task.hpp"
 
-Gut::Task::Task(std::shared_ptr<Client>& client, uint64_t reqid):client(std::move(client))
- , reqId(reqId){
-	std::cout << "task created" << std::endl;
+Gut::Task::Task(std::shared_ptr<Client>& client, uint32_t reqid):client(std::move(client))
+ , reqId(reqid){
+	std::cout << "task created with reqid " << std::to_string(this->reqId) <<std::endl;
 }
 
 std::shared_ptr<Gut::Client> Gut::Task::getClient() {

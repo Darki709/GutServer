@@ -10,6 +10,7 @@
 #include "../core/message.hpp"
 #include "../logic/task.hpp"
 #include "../stateless/messageCodec.hpp"
+#include "../stateless/streamer.hpp"
 
 #define WORKERCOUNT 2
 

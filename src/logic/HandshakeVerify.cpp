@@ -3,7 +3,7 @@
 #include <openssl/err.h>
 #include <iomanip>
 
-Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, uint64_t reqId, String encryptedMessage)
+Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, uint32_t reqId, String encryptedMessage)
     : Task(client, reqId), encryptedMessage(std::move(encryptedMessage)) {
 		//check client privileges
 		if(static_cast<int>(client->getState()) < 1) throw Errors::ILLEGALACCESS;

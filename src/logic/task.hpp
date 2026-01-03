@@ -33,7 +33,7 @@ namespace Gut
 		Server* server;
 
 	public:
-		Task(std::shared_ptr<Client>& client, uint64_t reqId);
+		Task(std::shared_ptr<Client>& client, uint32_t reqId);
 		virtual ~Task() = default;
 		std::shared_ptr<Gut::Client> getClient();
 		uint32_t getReqId();

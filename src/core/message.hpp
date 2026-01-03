@@ -10,6 +10,7 @@ namespace Gut
 		HANDSHAKEVERIFY,
 		HANDSHAKESUCCESS,
 		SNAPSHOT,
+		STREAM,
 	};
 	
 	class Message

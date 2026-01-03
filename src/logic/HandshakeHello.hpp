@@ -12,7 +12,7 @@ namespace Gut{
 			//task inputs
 			String clientPublicKey;
 		public:
-			HandShakeHello(std::shared_ptr<Client>& client, uint64_t reqId , String clientPublicKey);
+			HandShakeHello(std::shared_ptr<Client>& client, uint32_t reqId , String clientPublicKey);
 			std::optional<Message> execute() override;
 	};
 }

@@ -20,6 +20,7 @@
 #include <array>
 #include <cassert>
 #include <iomanip>
+#include <filesystem>
 
 namespace Gut
 {
@@ -40,7 +41,6 @@ namespace Gut
 	template <typename T>
 	inline static void append_bytes(std::string &out, const T &value)
 	{
-		std::cout << "appending " << sizeof(T) << std::endl;
 		out.append(reinterpret_cast<const char *>(&value), sizeof(T));
 	}
 

@@ -16,6 +16,8 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 	//extract request id
 	uint32_t reqId;
 	memcpy(&reqId, content.data(), 4);
+	reqId = ntohl(reqId);
+	std::cout << "request id" << std::to_string(reqId) << std::endl;
 	content.erase(0, 4);
 
 	std::cout << static_cast<int>(taskType) << std::endl;

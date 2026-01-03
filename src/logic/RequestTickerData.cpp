@@ -1,7 +1,7 @@
 #include "RequestTickerData.hpp"
 #include "../program/server.hpp"
 
-Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint64_t reqId, String content) : Task(client, reqId)
+Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint32_t reqId, String content) : Task(client, reqId)
 {
 	// check client privileges
 	if (static_cast<int>(client->getState()) < 3)
@@ -60,13 +60,24 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint6
 
 std::optional<Gut::Message> Gut::RequestTickerData::execute()
 {
+	// check if client still lives
+	std::shared_ptr<Client> client = Task::getClient();
+	SOCKET socket;
+	if (client)
+		socket = client->getSocket();
+	else
+		throw Errors::CLIENTNOTFOUND;
+
+	//prepare reqId
+	uint32_t reqId = Task::getReqId();
+	std::cout << "proccessing " << std::to_string(reqId) << std::endl;
+
 	// check if user asked for snaphot of historical data
 	if (snapshot)
 	{
 		// load price data from api, if nothig was thrown in means the fetch is ok,
 		// errors at execution are handled by the worker
 		Stock_helper::getInstance().fetchLiveData(symbol, static_cast<int>(interval));
-		
 
 		// read data from database
 
@@ -75,7 +86,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		wchar_t path[MAX_PATH];
 		GetModuleFileNameW(NULL, path, MAX_PATH);
 		std::filesystem::path exePath(path);
-		std::filesystem::path exeDir = exePath.parent_path(); // This is build/Debug/
+		std::filesystem::path exeDir = exePath.parent_path();								// This is build/Debug/
 		std::filesystem::path dbPath = exeDir.parent_path() / "database" / "stock_data.db"; // Move up one level from Debug to build, then into database
 		std::string db_path = dbPath.string();
 
@@ -89,6 +100,8 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		{
 			throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
 		}
+		// This allows your Python thread to WRITE while your C++ thread READS
+    	sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
 		std::cout << "conected to db" << std::endl;
 		const char *sql = R"(
         SELECT date, open, high, low, close, volume
@@ -162,9 +175,6 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 
 		int count = 0;
 		// send messages to the client
-		std::shared_ptr<Client> client = Task::getClient();
-		SOCKET socket;
-		if(client) socket = client->getSocket();
 		while (count < data.size())
 		{
 			String content;
@@ -172,27 +182,26 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 			std::cout << candle_count << std::endl;
 			content.reserve(8 + candle_count * 48); // preallocate the string 8 is number of header bytes and candles is the number of candles (out of 255 max per message) times 48 bytes per candle
 			content.push_back(static_cast<char>(MsgType::SNAPSHOT));
-			uint32_t req = htonl(Task::getReqId());
-			content.append(reinterpret_cast<char *>(&req), 4);
+			reqId = htonl(reqId);
+			content.append(reinterpret_cast<char *>(&reqId), 4);
 			content.push_back((data.size() - count) <= 255 ? 1 : 0);
 			append_bytes(content, candle_count);
 			for (uint16_t i = 0; i < candle_count; ++i)
-			{	
+			{
 				String row = data[count].messageFormat();
-				std::cout << row.size() << std::endl;
 				content.append(row.data(), row.size());
 				++count;
 			}
-			std::cout << content.size() << std::endl;
 			Server *server = Task::getServer();
-			server->addMessage(Message{content,socket});
+			server->addMessage(Message{content, socket});
 		}
 	}
 
 	// check if user wants to sign up for streaming
 	if (stream)
 	{
-		
+		// sign him up
+		Streamer::getInstance().registerTicket(symbol, Ticket{socket, reqId});
 	}
 
 	// this execute sends the messages by itself

@@ -249,3 +249,10 @@ Candles are packed **back-to-back** with no separators.
 - Parse candles using fixed offsets
 - No dynamic field lengths
 - No delimiters
+
+
+#Stream response message
+
+message type: 3 
+
+[4 bytes length | is_encrypted flags 1 byte set to encrypted][1 byte message type 3 STREAM | 4 bytes requests id used by client to ask for the streaming | 8 bytes unix ts | 8 bytes open | 8 bytes high | 8 bytes low | 8 bytes close | 8 bytes volume]

@@ -9,7 +9,7 @@ namespace Gut{
 		private:
 			String encryptedMessage;
 		public:
-			HandShakeVerify(std::shared_ptr<Client>& client, uint64_t reqId , String encryptedMessage);
+			HandShakeVerify(std::shared_ptr<Client>& client, uint32_t reqId , String encryptedMessage);
 			std::optional<Message> execute() override;
 	};
 }

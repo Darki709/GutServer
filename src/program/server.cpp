@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <cstring>
 
-Gut::Server &Gut::Server::getInstance()
+Gut::Server& Gut::Server::getInstance()
 {
 	static Server instance;
 	return instance;
@@ -22,25 +22,30 @@ Gut::Server::Server()
 
 Gut::Server::~Server()
 {
-	// 1. signal workers to stop
+	// signal workers to stop
 	running = false;
 
-	// 2. wake all workers blocked on taskCV
+	// wake all workers blocked on taskCV
 	taskCV.notify_all();
 
-	// 3. destroy workers (they must join internally)
+	// destroy workers (they must join internally)
 	for (int i = 0; i < WORKERCOUNT; i++)
 	{
 		delete workers[i];
 		workers[i] = nullptr;
 	}
 
-	// 4. close server socket last
+	// close the streamer thread
+	Streamer::getInstance().shutDown();
+
+	// close server socket last
 	delete serverSocket;
 }
 
 void Gut::Server::serverStart()
 {
+	Streamer::getInstance();
+	std::cout <<"streamer started" << std::endl;
 	try
 	{
 		serverSocket->bind();
@@ -273,6 +278,9 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 Gut::ClientSet::iterator Gut::Server::kick(Gut::ClientSet::iterator it)
 {
 	SOCKET sock = it->second->getSocket();
+	
+	//remove client from streaming list if he is registered
+	Streamer::getInstance().removeClient(sock);
 
 	// Close the socket
 	closesocket(sock);
@@ -284,6 +292,9 @@ Gut::ClientSet::iterator Gut::Server::kick(Gut::ClientSet::iterator it)
 void Gut::Server::kick(std::shared_ptr<Client> client_ptr)
 {
 	SOCKET sock = client_ptr->getSocket();
+
+	//remove client from streaming list if he is registered
+	Streamer::getInstance().removeClient(sock);
 
 	// Close socket
 	closesocket(sock);

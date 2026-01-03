@@ -3,8 +3,8 @@
 #include "../libraries.hpp"
 #include "task.hpp"
 #include "../stateless/stock_db_helper.hpp"
-#include <filesystem>
 #include "../external/sqlite3.h"
+#include "../stateless/streamer.hpp"
 
 namespace Gut
 {
@@ -36,7 +36,7 @@ namespace Gut
 		bool snapshot;
 
 	public:
-		RequestTickerData(std::shared_ptr<Client> &client, uint64_t reqId, String content);
+		RequestTickerData(std::shared_ptr<Client> &client, uint32_t reqId, String content);
 		std::optional<Message> execute() override;
 	};
 
