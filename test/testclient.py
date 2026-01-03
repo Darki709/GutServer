@@ -13,6 +13,7 @@ MSG_TEST = 1
 MSG_HANDSHAKE_SUCCESS = 1
 MSG_PRICE_REQUEST = 4
 MSG_PRICE_RESPONSE = 2
+MSG_PRICE_STREAM = 3
 
 FLAG_PLAINTEXT = 0x00
 FLAG_ENCRYPTED = 0x01
@@ -105,7 +106,7 @@ def build_price_request(symbol: str, interval: str):
     payload += struct.pack("!I", interval_sec)
     payload += struct.pack("!Q", 0)  # start_ts
     payload += struct.pack("!Q", 0)  # end_ts
-    payload += struct.pack("B", 0x01)  # flags = SNAPSHOT
+    payload += struct.pack("B", 0x03)  # flags = SNAPSHOT
     return payload
 
 # --- Parse candles ---
@@ -122,6 +123,29 @@ def parse_candles(body):
     candleCount = body[5:6]
     print(candleCount)
     body = body[7:]
+    print(len(body))
+
+    for i in range(0, len(body), CANDLE_SIZE):
+        ts, open_, high, low, close, volume = struct.unpack(
+            FORMAT, body[i:i + CANDLE_SIZE]
+        )
+
+        print(
+            f"Timestamp={ts} "
+            f"Open={open_} "
+            f"High={high} "
+            f"Low={low} "
+            f"Close={close} "
+            f"Volume={volume}"
+        )
+
+def parse_candles_s(body):
+    CANDLE_SIZE = 48
+    FORMAT = "!QddddQ"
+
+    reqId = body[:3]
+    print(reqId)
+    body = body[4:]
     print(len(body))
 
     for i in range(0, len(body), CANDLE_SIZE):
@@ -197,7 +221,8 @@ def main():
 
         # --- Send first real message: price request (AES-GCM) ---
         reqid = next_reqid()
-        payload = build_price_request("GOOG", "1d")
+        payload = build_price_request("BTC-USD", "1d"
+                                               "")
         send_gcm_message(sock, aes_key, MSG_PRICE_REQUEST, reqid, payload)
 
         # --- Receive and print price data ---
@@ -211,6 +236,8 @@ def main():
             msg_type, body = parse_server_response(response, aes_key)
             if msg_type == MSG_PRICE_RESPONSE:
                 parse_candles(body)
+            if msg_type == MSG_PRICE_STREAM:
+                parse_candles_s(body)
 
 
 if __name__ == "__main__":
