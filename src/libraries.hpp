@@ -21,6 +21,7 @@
 #include <cassert>
 #include <iomanip>
 #include <filesystem>
+#include <algorithm>
 
 namespace Gut
 {
@@ -36,6 +37,7 @@ namespace Gut
 		HANDSHAKEFAILURE,
 		ILLEGALACCESS,
 		INVALIDREQUEST,
+		FATALFAILURE
 	};
 
 	template <typename T>

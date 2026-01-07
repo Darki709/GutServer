@@ -41,7 +41,6 @@ namespace Gut
 	private:
 		Stock_helper();
 		~Stock_helper();
-		std::mutex fetchMutex;
 		PyObject* m_pModule = nullptr;
     	PyObject* m_pFunc = nullptr;
 		sqlite3 *db;

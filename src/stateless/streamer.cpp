@@ -182,7 +182,7 @@ void Gut::Streamer::run()
 					std::cout << "aquired data isn't live data" << std::endl;
 				}
 			}
-			catch (const std::exception &e)
+			catch (std::exception e)
 			{
 				std::cerr << "Streamer error for " << symbol << ": " << e.what() << std::endl;
 			}
@@ -204,7 +204,9 @@ bool Gut::Streamer::isMarketLive(uint64_t dataUnixTime)
 								   .count();
 	std::cout << currentUnixTime << std::endl;
 	std::cout << dataUnixTime << std::endl;
+
 	const uint64_t STALE_THRESHOLD = 300; // 5 minutes
+	
 	if (dataUnixTime > currentUnixTime)
 		return true;
 	return (currentUnixTime - dataUnixTime) < STALE_THRESHOLD;
