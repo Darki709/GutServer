@@ -256,3 +256,11 @@ Candles are packed **back-to-back** with no separators.
 message type: 3 
 
 [4 bytes length | is_encrypted flags 1 byte set to encrypted][1 byte message type 3 STREAM | 4 bytes requests id used by client to ask for the streaming | 8 bytes unix ts | 8 bytes open | 8 bytes high | 8 bytes low | 8 bytes close | 8 bytes volume]
+
+
+
+#Cancel Ticker Stream
+
+task type number: 5
+
+[header as usual set to notify encrypted message][1 byte task type set to 5 CANCELTIKCERSTREAM |4 bytes client request id | 4 bytes request id of the original streaming request (network byte order) |1 bytes length of the symbol | the symbol in length bytes]

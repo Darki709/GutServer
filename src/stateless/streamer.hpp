@@ -22,6 +22,7 @@ namespace Gut
 		Ticker() = default;
 		void addClient(Ticket client);
 		void removeClient(SOCKET socket);
+		void removeClient(SOCKET socket, uint32_t reqId);
 		bool isEmpty();
 		void broadcast(StockData data, Gut::Server& server);		
 	};
@@ -36,6 +37,8 @@ namespace Gut
 		void registerTicket(String symbol, Ticket ticket);
 		//removes a client from all tickers he was registered to
 		void removeClient(SOCKET socket);
+		//cancels a specific streaming request of a client on a specific symbol
+		void cancelRequest(String symbol, SOCKET socket, uint32_t reqId);
 		void shutDown();
 		static void debugPrintContent(String& content);
 

@@ -23,7 +23,7 @@ Gut::User_table::User_table()
 
 	// make sure the table exists
 	const char *query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, salt TEXT NOT NULL)";
-	int rc = sqlite3_exec(db, query, nullptr, nullptr, nullptr);
+	rc = sqlite3_exec(db, query, nullptr, nullptr, nullptr);
 	if (rc != SQLITE_OK)
 	{
 		std::cout << "cant create users table" << std::endl;
@@ -107,22 +107,22 @@ int Gut::User_table::addUser(String username, String password)
 		throw feedback;
 	}
 
-	// check that the is no other user with the same username
-	const char *query = "SELECT COUNT(*) FROM users WHERE username = ?;";
-	sqlite3_stmt *stmt;
-	if (sqlite3_prepare_v2(db, query, -1, &stmt, nullptr) != SQLITE_OK)
+	// check that there is no other user with the same username
+	const char *queryUsername = "SELECT COUNT(*) FROM users WHERE username = ?;";
+	sqlite3_stmt *stmtUsername;
+	if (sqlite3_prepare_v2(db, queryUsername, -1, &stmtUsername, nullptr) != SQLITE_OK)
 		throw std::runtime_error("failed to check user uniqueness");
 
-	sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+	sqlite3_bind_text(stmtUsername, 1, username.c_str(), -1, SQLITE_STATIC);
 	int count = 0;
-	if (sqlite3_step(stmt) == SQLITE_ROW)
+	if (sqlite3_step(stmtUsername) == SQLITE_ROW)
 	{
-		count = sqlite3_column_int(stmt, 0);
+		count = sqlite3_column_int(stmtUsername, 0);
 	}
 	else
 		throw std::runtime_error("failed to check user uniqueness");
 
-	sqlite3_finalize(stmt);
+	sqlite3_finalize(stmtUsername);
 	if (count != 0)
 		return -1;
 

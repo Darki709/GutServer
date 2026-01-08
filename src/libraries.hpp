@@ -37,7 +37,7 @@ namespace Gut
 		HANDSHAKEFAILURE,
 		ILLEGALACCESS,
 		INVALIDREQUEST,
-		FATALFAILURE
+		FATALFAILURE,
 	};
 
 	template <typename T>

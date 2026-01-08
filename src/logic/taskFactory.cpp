@@ -2,6 +2,7 @@
 #include "HandshakeVerify.hpp"
 #include "taskFactory.hpp"
 #include "RequestTickerData.hpp"
+#include "CancelTickerStream.hpp"
 #include "../runtime/client.hpp"
 
 std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::shared_ptr<Client>& client)
@@ -21,7 +22,7 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 	content.erase(0, 4);
 
 	std::cout << static_cast<int>(taskType) << std::endl;
-
+	try{
 	//switch on task type
 	switch (static_cast<int>(taskType))
 	{
@@ -31,7 +32,13 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 		return std::make_unique<HandShakeVerify>(client, reqId ,content);
 	case static_cast<int>(TaskType::REQUESTTICKERDATA):
 		return std::make_unique<RequestTickerData>(client, reqId, content);
+	case static_cast<int>(TaskType::CANCELTICKERSTREAM):
+		return std::make_unique<CancelTickerStream>(client, reqId, content);
 	default:
 		return nullptr;
+	}}
+	catch(Errors err){
+		if(err == Errors::ILLEGALACCESS) return nullptr;
 	}
+	return nullptr;
 }

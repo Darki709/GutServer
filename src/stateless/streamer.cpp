@@ -75,13 +75,8 @@ void Gut::Ticker::removeClient(SOCKET socket)
 	// The Erase-Remove Idiom:
 	// 1. std::remove_if moves all 'matching' elements to the end of the vector
 	// 2. .erase() actually removes them from memory
-	registeredClients.erase(
-		std::remove_if(registeredClients.begin(), registeredClients.end(),
-					   [socket](const Ticket &t)
-					   {
-						   return t.clientSocket == socket;
-					   }),
-		registeredClients.end());
+	std::erase_if(registeredClients, [socket](const Ticket &t)
+				  { return t.clientSocket == socket; });
 }
 
 bool Gut::Ticker::isEmpty()
@@ -119,23 +114,27 @@ void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 	}
 }
 
-void Gut::Streamer::debugPrintContent(String& content) {
-    std::cout << "--- Binary Message (Size: " << content.size() << ") ---" << std::endl;
-    
-    for (size_t i = 0; i < content.size(); ++i) {
-        // Convert the byte to an unsigned hex value
-        unsigned char byte = static_cast<unsigned char>(content[i]);
-        
-        // Print as 2-digit hex
-        printf("%02X ", byte);
+void Gut::Streamer::debugPrintContent(String &content)
+{
+	std::cout << "--- Binary Message (Size: " << content.size() << ") ---" << std::endl;
 
-        // Add a vertical bar every 4 bytes for readability
-        if ((i + 1) % 4 == 0) std::cout << "| ";
-        
-        // New line every 16 bytes
-        if ((i + 1) % 16 == 0) std::cout << std::endl;
-    }
-    std::cout << "\n--------------------------------------------" << std::endl;
+	for (size_t i = 0; i < content.size(); ++i)
+	{
+		// Convert the byte to an unsigned hex value
+		unsigned char byte = static_cast<unsigned char>(content[i]);
+
+		// Print as 2-digit hex
+		printf("%02X ", byte);
+
+		// Add a vertical bar every 4 bytes for readability
+		if ((i + 1) % 4 == 0)
+			std::cout << "| ";
+
+		// New line every 16 bytes
+		if ((i + 1) % 16 == 0)
+			std::cout << std::endl;
+	}
+	std::cout << "\n--------------------------------------------" << std::endl;
 }
 
 void Gut::Streamer::run()
@@ -206,7 +205,7 @@ bool Gut::Streamer::isMarketLive(uint64_t dataUnixTime)
 	std::cout << dataUnixTime << std::endl;
 
 	const uint64_t STALE_THRESHOLD = 300; // 5 minutes
-	
+
 	if (dataUnixTime > currentUnixTime)
 		return true;
 	return (currentUnixTime - dataUnixTime) < STALE_THRESHOLD;
@@ -217,4 +216,29 @@ void Gut::Streamer::shutDown()
 	running = false;   // 1. Change the condition
 	m_cv.notify_all(); // 2. Interrupt the sleep immediately
 	thread.join();	   // 3. Wait for the thread to finish its last tasks
+}
+
+//call only under locked mutex
+void Gut::Ticker::removeClient(SOCKET socket, uint32_t reqId)
+{
+	std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
+				  { if(t.clientSocket == socket && t.reqId == reqId){
+					std::cout << "removing client " << socket << std::endl;
+					return true; }});
+}
+
+void Gut::Streamer::cancelRequest(String symbol, SOCKET socket, uint32_t reqId)
+{
+	std::cout << "canceling streaming request" << std::endl; 
+	std::lock_guard<std::mutex> lock(streamingListMutex);
+	auto it = streamingList.find(symbol);
+	if (it != streamingList.end())
+	{
+		it->second.removeClient(socket, reqId); // removes the client
+		if (it->second.isEmpty())
+		{
+			streamingList.erase(it); // erase the ticker because no client is requesting steaming for it
+			std::cout << "Ticker removed from stream (no active clients)." << std::endl;
+		}
+	}
 }

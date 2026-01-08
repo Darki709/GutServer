@@ -63,7 +63,7 @@ std::optional<Gut::Message> Gut::HandShakeVerify::execute(){
 
 	//==============================================
 	//temporary bypass of login step for development
-	client->setState(ClientState::AUTHENTICATED);
+	//client->setState(ClientState::AUTHENTICATED);
 	//==============================================
 	//remove when login and register task are completed
 

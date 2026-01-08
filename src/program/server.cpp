@@ -114,12 +114,13 @@ void Gut::Server::serverRun()
 /*==================================*/
 
 void Gut::Server::pushTask(std::unique_ptr<Task> task)
-{
+{	
+	if(task != nullptr) 
 	{
 		std::lock_guard<std::mutex> lock(taskMutex);
-		if(task != nullptr) taskQueue.push(std::move(task));
-	} // mutex releases automatically
-	taskCV.notify_one();
+		taskQueue.push(std::move(task));
+		taskCV.notify_one();
+	}
 }
 
 void Gut::Server::sendResponses(fd_set &writefds)
