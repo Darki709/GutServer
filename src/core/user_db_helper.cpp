@@ -40,7 +40,7 @@ Gut::User_table::~User_table()
 	}
 }
 
-int Gut::User_table::authenticateUser(String username, String password)
+uint32_t Gut::User_table::authenticateUser(String username, String password)
 {
 	// retrive the users salt
 	const char *querySalt = "SELECT salt FROM users WHERE username = ?";

@@ -68,7 +68,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 	else
 		throw Errors::CLIENTNOTFOUND;
 
-	//prepare reqId
+	// prepare reqId
 	uint32_t reqId = Task::getReqId();
 	std::cout << "proccessing " << std::to_string(reqId) << std::endl;
 
@@ -101,7 +101,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 			throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
 		}
 		// This allows your Python thread to WRITE while your C++ thread READS
-    	sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+		sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
 		std::cout << "conected to db" << std::endl;
 		const char *sql = R"(
         SELECT date, open, high, low, close, volume
@@ -182,10 +182,11 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 			std::cout << candle_count << std::endl;
 			content.reserve(8 + candle_count * 48); // preallocate the string 8 is number of header bytes and candles is the number of candles (out of 255 max per message) times 48 bytes per candle
 			content.push_back(static_cast<char>(MsgType::SNAPSHOT));
-			reqId = htonl(reqId);
-			content.append(reinterpret_cast<char *>(&reqId), 4);
+			uint32_t network_reqId = htonl(reqId);
+			content.append(reinterpret_cast<char *>(&network_reqId), 4);
 			content.push_back((data.size() - count) <= 255 ? 1 : 0);
-			append_bytes(content, candle_count);
+			uint16_t network_count = htons(candle_count); // Convert to Network Order
+			content.append(reinterpret_cast<char *>(&network_count), 2);
 			for (uint16_t i = 0; i < candle_count; ++i)
 			{
 				String row = data[count].messageFormat();

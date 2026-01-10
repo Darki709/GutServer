@@ -1,0 +1,3 @@
+D:/tomer/Gut/Gut Webserver/CMakeFiles/gutweb.dir
+D:/tomer/Gut/Gut Webserver/CMakeFiles/ALL_BUILD.dir
+D:/tomer/Gut/Gut Webserver/CMakeFiles/ZERO_CHECK.dir

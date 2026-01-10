@@ -17,7 +17,7 @@ namespace Gut
 
 	struct AuthContext {
     	UsrID userId;
-    	std::string username;
+    	String username;
 	};
 
 	struct CryptoContext {
@@ -34,7 +34,7 @@ namespace Gut
 
 		//client identifiers
 		ClientState state; //state of clients connection cycle
-		std::optional<AuthContext> credentials; // user id and username
+		AuthContext credentials; // user id and username
 
 
 		//encryption
@@ -67,6 +67,9 @@ namespace Gut
 		void setClientEncrypted(SessionKey key); //initializes crypto context after client succefully finished te private key exchange 
 		
 		void startTunnel();
+
+		void setAuthenticated(String username, UsrID usrId);
+		const AuthContext& getCredentials();
 	};
 
 }

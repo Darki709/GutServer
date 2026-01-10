@@ -20,7 +20,7 @@ namespace Gut{
 			User_table();
 			~User_table();
 			int addUser(String username, String password); //0 for success, -1 for user exists , throws back the feedback if password is insecure
-			int authenticateUser(String username, String password);//return usrid for success, -1 for wrong password, -2 for failure
+			uint32_t authenticateUser(String username, String password);//return usrid for success, -1 for wrong password, -2 for user doesn't exist
 	};
 
 }

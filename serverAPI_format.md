@@ -276,6 +276,21 @@ maximum payload length is 1 (username length) + 1 (password length) + 255 (usern
 
 Message type: 4
 [usual header set flag to encrypted][1 byte task type set to 4 REGISTER | 1 byte register response flag:
-if flag is set to 0 SUCCESS it menas user is successfully register, user must send a login request to continue \
+if flag is set to 0 SUCCESS it menas user is successfully registered, user must send a login request to continue \
 if flag is set to 1 it means the username is already taken, user must send a new register request with a different username \
 if flag is set to 2 it means the pass is insecure, the remainder of te message is now the password strength checker feedback ]
+
+#Login request
+
+Task type: 2
+
+[usual header set flag to encrypted][1 byte task type set to 2 LOGIN |  4 bytes client request id | 1 byte username length | username | 1 byte password length | password]
+maximum payload length is 1 (username length) + 1 (password length) + 255 (username max length) + 255 (password max length) = 512 bytes longer requests will be regarded as INVALIDREQUEST and will be dropped
+
+#Login response
+
+Message type: 5
+[usual header set flag to encrypted][1 byte task type set to 5 LOGIN | 1 byte login response flag:
+if flag is set to 0 SUCCESS it menas user is successfully logged in and can start sending requests to the server \
+if flag is set to 1 i means that the password that was given is wrong, user is required to send the correct password \
+if flag is set to 2 it means that the user that qas requested to be logged in isn't registered in the server]

@@ -59,3 +59,14 @@ void Gut::Client::startTunnel(){
 	cipher.sendNonce = 0;
 	state = ClientState::ENCRYPTED;
 }
+
+//sets a client as authenticated
+void Gut::Client::setAuthenticated(String username, UsrID usrId){
+	credentials.userId = usrId;
+	credentials.username = username;
+	state = ClientState::AUTHENTICATED;
+}
+
+const Gut::AuthContext& Gut::Client::getCredentials(){
+	return credentials;
+}
