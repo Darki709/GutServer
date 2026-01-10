@@ -14,6 +14,7 @@ MSG_HANDSHAKE_SUCCESS = 1
 MSG_PRICE_REQUEST = 4
 MSG_PRICE_RESPONSE = 2
 MSG_PRICE_STREAM = 3
+MSG_CANCEL_TICKER_STREAM = 5
 
 FLAG_PLAINTEXT = 0x00
 FLAG_ENCRYPTED = 0x01
@@ -106,7 +107,7 @@ def build_price_request(symbol: str, interval: str):
     payload += struct.pack("!I", interval_sec)
     payload += struct.pack("!Q", 0)  # start_ts
     payload += struct.pack("!Q", 0)  # end_ts
-    payload += struct.pack("B", 0x03)  # flags = SNAPSHOT
+    payload += struct.pack("B", 0x02)  # flags = SNAPSHOT
     return payload
 
 # --- Parse candles ---
@@ -187,6 +188,34 @@ def send_handshake_verify_ecb(sock, aes_key):
     sock.sendall(packet)
     print(f"[SEND] Handshake verify (AES-ECB, plaintext flag) msgType={msg_type} reqId={reqid}")
 
+
+def cancel_ticker_stream(sock, aes_key, original_req_id, symbol: str):
+    """
+    Sends a request to stop a specific ticker stream.
+    :param sock: The active socket
+    :param aes_key: The established AES key
+    :param original_req_id: The reqId used when you STARTED the stream
+    :param symbol: The ticker symbol (e.g., "TSLA")
+    """
+    # Generate a new unique ID for this cancellation request itself
+    cancel_req_id = next_reqid()
+
+    # 1 byte (Type) + 4 bytes (Cancel ReqID) + 4 bytes (Original ReqID) + 1 byte (Len)
+    # The Task Type is actually handled inside send_gcm_message usually,
+    # but based on your description, the body starts with the original_req_id.
+
+    # Structure: [Original ReqID (4B)] + [Symbol Len (1B)] + [Symbol (NB)]
+    payload = struct.pack("!I", original_req_id)
+    payload += struct.pack("B", len(symbol))
+    payload += symbol.encode('utf-8')
+
+    # send_gcm_message will automatically prepend MSG_CANCEL_TICKER_STREAM (1B)
+    # and the new cancel_req_id (4B) to this payload before encrypting.
+    send_gcm_message(sock, aes_key, MSG_CANCEL_TICKER_STREAM, cancel_req_id, payload)
+
+    print(f"[CLIENT] Requested cancellation for {symbol} (Orig ID: {original_req_id})")
+    return cancel_req_id
+
 # ================= MAIN =================
 def main():
     global send_nonce, recv_nonce
@@ -220,11 +249,11 @@ def main():
         print("[CLIENT] Handshake completed")
 
         # --- Send first real message: price request (AES-GCM) ---
-        reqid = next_reqid()
-        payload = build_price_request("BTC-USD", "1d"
-                                               "")
-        send_gcm_message(sock, aes_key, MSG_PRICE_REQUEST, reqid, payload)
+        stream_reqid = next_reqid()
+        payload = build_price_request("TSLA", "5m")
+        send_gcm_message(sock, aes_key, MSG_PRICE_REQUEST, stream_reqid, payload)
 
+        message_count = 0
         # --- Receive and print price data ---
         while True:
             response = sock.recv(4)
@@ -238,6 +267,12 @@ def main():
                 parse_candles(body)
             if msg_type == MSG_PRICE_STREAM:
                 parse_candles_s(body)
+                message_count += 1
+
+            if message_count == 1:
+                cancel_ticker_stream(sock, aes_key, stream_reqid, "TSLA")
+
+
 
 
 if __name__ == "__main__":

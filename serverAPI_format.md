@@ -175,7 +175,7 @@ Large datasets are split across **multiple messages**.
 
 ### 3. MsgType
 - **Size:** 1 byte
-- **Value:** `0x04`
+- **Value:** `0x03`
 - **Description:** Price Data Response
 
 ---
@@ -264,3 +264,18 @@ message type: 3
 task type number: 5
 
 [header as usual set to notify encrypted message][1 byte task type set to 5 CANCELTIKCERSTREAM |4 bytes client request id | 4 bytes request id of the original streaming request (network byte order) |1 bytes length of the symbol | the symbol in length bytes]
+
+#Register User request
+
+Task type: 3
+
+[usual header set flag to encrypted][1 byte task type set to 3 REGISTER |  4 bytes client request id | 1 byte username length | username | 1 byte password length | password]
+maximum payload length is 1 (username length) + 1 (password length) + 255 (username max length) + 255 (password max length) = 512 bytes longer requests will be regarded as INVALIDREQUEST and will be dropped
+
+#Register message response 
+
+Message type: 4
+[usual header set flag to encrypted][1 byte task type set to 4 REGISTER | 1 byte register response flag:
+if flag is set to 0 SUCCESS it menas user is successfully register, user must send a login request to continue \
+if flag is set to 1 it means the username is already taken, user must send a new register request with a different username \
+if flag is set to 2 it means the pass is insecure, the remainder of te message is now the password strength checker feedback ]

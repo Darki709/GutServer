@@ -11,6 +11,8 @@ namespace Gut
 		HANDSHAKESUCCESS,
 		SNAPSHOT,
 		STREAM,
+		REGISTER,
+		LOGIN,
 	};
 	
 	class Message

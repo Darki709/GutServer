@@ -26,7 +26,7 @@ Gut::User_table::User_table()
 	rc = sqlite3_exec(db, query, nullptr, nullptr, nullptr);
 	if (rc != SQLITE_OK)
 	{
-		std::cout << "cant create users table" << std::endl;
+		std::cout << "cant reach users table" << std::endl;
 		throw Errors::FATALFAILURE;
 	}
 }
@@ -173,6 +173,7 @@ int Gut::User_table::addUser(String username, String password)
 	if (rc == SQLITE_DONE)
 	{
 		std::cout << "user: " << username << " registered" << std::endl;
+		return 0;
 	}
 	else if (rc == SQLITE_CONSTRAINT)
 	{
