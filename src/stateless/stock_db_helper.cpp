@@ -5,58 +5,69 @@ namespace fs = std::filesystem;
 
 Gut::Stock_helper::Stock_helper()
 {
-	PyStatus status;
-	PyConfig config;
-	PyConfig_InitIsolatedConfig(&config);
+	// --- 1. PRE-INITIALIZATION (Environment & DLL Injection) ---
+	_putenv("OMP_NUM_THREADS=1");
+	_putenv("OPENBLAS_NUM_THREADS=1");
 
-	// ------------------------------------
-	// 1. Locate paths relative to EXE
-	// ------------------------------------
 	wchar_t rawPath[MAX_PATH];
-	if (!GetModuleFileNameW(NULL, rawPath, MAX_PATH))
-		throw std::runtime_error("GetModuleFileNameW failed");
-
+	GetModuleFileNameW(NULL, rawPath, MAX_PATH);
 	fs::path exeDir = fs::path(rawPath).parent_path();
 	fs::path pyHome = exeDir / "python_runtime";
 	fs::path stdlibZip = pyHome / "python313.zip";
-	fs::path sitePackages = pyHome / "Lib" / "site-packages";
+	fs::path curlCffiDir = pyHome / "Lib" / "site-packages" / "curl_cffi";
 
-	// ------------------------------------
-	// 2. Validate Runtime Files
-	// ------------------------------------
-	if (!fs::exists(stdlibZip))
-		throw std::runtime_error("Critical: python313.zip missing from runtime folder.");
+	// --- 2. THE C++ DLL FORCE-LOAD (The Secret Sauce) ---
+	// We manually load libcurl to resolve the "specified module could not be found" error.
+	std::vector<std::wstring> criticalDlls = {
+		L"libcrypto-3-x64.dll",
+		L"libssl-3-x64.dll",
+		L"libcurl.dll" // Most important one for curl_cffi
+	};
 
-	// ------------------------------------
-	// 3. Configure Isolated Environment
-	// ------------------------------------
+	std::cout << "--- Diagnostic: Probing C-Dependencies ---" << std::endl;
+	for (const auto &dllName : criticalDlls)
+	{
+		fs::path dllPath = curlCffiDir / dllName;
+		HMODULE hMod = LoadLibraryExW(dllPath.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+		if (hMod)
+		{
+			std::wcout << L"SUCCESS: Pre-loaded " << dllName << std::endl;
+		}
+		else
+		{
+			DWORD err = GetLastError();
+			std::wcout << L"ERROR: Failed to load " << dllName << L" (Code: " << err << L")" << std::endl;
+			std::cout << "Target Path: " << dllPath.string() << std::endl;
+		}
+	}
+
+	// --- 3. STANDARD PYTHON CONFIGURATION ---
+	PyConfig config;
+	PyConfig_InitIsolatedConfig(&config);
 	config.isolated = 1;
 	config.use_environment = 0;
-	config.site_import = 0; // We will load 'site' manually after init
-	config.module_search_paths_set = 1;
+	config.site_import = 1;
 
 	PyConfig_SetString(&config, &config.home, pyHome.wstring().c_str());
-	PyConfig_SetString(&config, &config.program_name, rawPath);
-	PyConfig_SetString(&config, &config.stdlib_dir, stdlibZip.wstring().c_str());
+	PyConfig_SetString(&config, &config.base_executable, rawPath);
 
-	// Search path priority
-	PyWideStringList_Append(&config.module_search_paths, sitePackages.wstring().c_str());
-	PyWideStringList_Append(&config.module_search_paths, exeDir.wstring().c_str());
-	PyWideStringList_Append(&config.module_search_paths, stdlibZip.wstring().c_str());
+	// IMPORTANT: This tells Python where to find the 'encodings' module
+	config.module_search_paths_set = 1;
+	PyWideStringList_Append(&config.module_search_paths, stdlibZip.wstring().c_str()); // Points to python313.zip
 	PyWideStringList_Append(&config.module_search_paths, (pyHome / "DLLs").wstring().c_str());
+	PyWideStringList_Append(&config.module_search_paths, (pyHome / "Lib").wstring().c_str());
+	PyWideStringList_Append(&config.module_search_paths, (pyHome / "Lib" / "site-packages").wstring().c_str());
+	PyWideStringList_Append(&config.module_search_paths, exeDir.wstring().c_str());
 
-	// ------------------------------------
-	// 4. Initialize Interpreter
-	// ------------------------------------
-	status = Py_InitializeFromConfig(&config);
+	fs::path stockapiPath = exeDir / "stockapi";
+	PyWideStringList_Append(&config.module_search_paths, stockapiPath.wstring().c_str());
+
+	PyStatus status = Py_InitializeFromConfig(&config);
 	PyConfig_Clear(&config);
-
 	if (PyStatus_Exception(status))
 		Py_ExitStatusException(status);
 
-	// ------------------------------------
-	// 5. Windows DLL & Site-Packages Fix
-	// ------------------------------------
+	// --- 4. PYTHON-SIDE PATH REGISTRATION ---
 	std::string forceLoadScript =
 		"import os, sys, ctypes\n"
 		"from pathlib import Path\n"
@@ -76,28 +87,39 @@ Gut::Stock_helper::Stock_helper()
 
 	PyRun_SimpleString(forceLoadScript.c_str());
 
-	std::string absoluteFix =
-		"import os, sys, ctypes\n"
-		"from pathlib import Path\n"
-		"curl_dir = Path(r'D:/tomer/Gut/Gut Webserver/build/Debug/python_runtime/Lib/site-packages/curl_cffi')\n"
-		"pyd_path = curl_dir / '_wrapper.cp313-win_amd64.pyd'\n"
-		"\n"
-		"# Add directory to search path\n"
-		"os.add_dll_directory(str(curl_dir))\n"
-		"\n"
-		"try:\n"
-		"    # Load with a specific flag that tells Windows to look in the DLL's own folder\n"
-		"    # 0x00000008 is LOAD_WITH_ALTERED_SEARCH_PATH\n"
-		"    handle = ctypes.windll.kernel32.LoadLibraryExW(str(pyd_path), None, 0x00000008)\n"
-		"    if handle:\n"
-		"        print(f'SUCCESS: Windows Kernel loaded _wrapper.pyd at {handle}')\n"
-		"    else:\n"
-		"        err = ctypes.windll.kernel32.GetLastError()\n"
-		"        print(f'KERNEL ERROR CODE: {err}')\n"
-		"except Exception as e:\n"
-		"    print(f'LOAD ERROR: {e}')\n";
+	std::string portableFix = R"(
+import os, sys, ctypes
+from pathlib import Path
 
-	PyRun_SimpleString(absoluteFix.c_str());
+# 1. Detect where we are
+exe_dir = Path(sys.executable).parent
+runtime_lib = exe_dir / 'python_runtime' / 'Lib' / 'site-packages'
+curl_dir = runtime_lib / 'curl_cffi'
+
+# 2. Add DLL search paths dynamically
+if curl_dir.exists():
+    os.add_dll_directory(str(curl_dir))
+    print(f"Portable: Registered {curl_dir}")
+
+# 3. Locate the wrapper (using a wildcard to find the .pyd even if the suffix changes)
+try:
+    pyd_files = list(curl_dir.glob('_wrapper*.pyd'))
+    if pyd_files:
+        pyd_path = pyd_files[0]
+        # Use the same 'ALTERED_SEARCH_PATH' logic but with the dynamic path
+        handle = ctypes.windll.kernel32.LoadLibraryExW(str(pyd_path), None, 0x00000008)
+        if handle:
+            print(f"SUCCESS: Portable load of {pyd_path.name} at {handle}")
+        else:
+            err = ctypes.windll.kernel32.GetLastError()
+            print(f"KERNEL ERROR: {err} at path {pyd_path}")
+    else:
+        print("ERROR: Could not find _wrapper.pyd in curl_cffi folder.")
+except Exception as e:
+    print(f"PORTABLE LOAD ERROR: {e}")
+)";
+
+	PyRun_SimpleString(portableFix.c_str());
 
 	std::string linkTest =
 		"import os, sys, ctypes\n"
@@ -121,25 +143,37 @@ Gut::Stock_helper::Stock_helper()
 
 	PyRun_SimpleString(linkTest.c_str());
 
-	// ------------------------------------
-	// 6. Import your module
-	// ------------------------------------
+	// --- 5. THE ACTUAL IMPORT ---
+	PyGILState_STATE gstate = PyGILState_Ensure();
+	std::cout << "Final attempt to import stockapi..." << std::endl;
+	std::string cmd = "import traceback\ntry:\n    import stockapi.stockapi\n    print('--- SYSTEM ONLINE ---')\nexcept Exception:\n    traceback.print_exc()";
+	PyRun_SimpleString(cmd.c_str());
+	PyGILState_Release(gstate);
+
+	// Get the module handle from sys.modules
 	m_pModule = PyImport_ImportModule("stockapi.stockapi");
+
 	if (!m_pModule)
 	{
 		PyErr_Print();
+		PyGILState_Release(gstate);
 		throw std::runtime_error("Failed to import stockapi.");
 	}
 
 	m_pFunc = PyObject_GetAttrString(m_pModule, "fetch_live_data");
-	if (!m_pFunc || !PyCallable_Check(m_pFunc) || m_pFunc == nullptr)
+
+	if (!m_pFunc || !PyCallable_Check(m_pFunc))
 	{
-		throw std::runtime_error("fetch_live_data is missing or not callable");
+		Py_XDECREF(m_pFunc);
+		Py_DECREF(m_pModule);
+		PyGILState_Release(gstate);
+		throw std::runtime_error("fetch_live_data missing or not callable.");
 	}
 
-	// Release GIL for multi-threaded C++ apps
-	PyEval_SaveThread();
+	PyGILState_Release(gstate);
+	std::cout << "Python Environment Initialized Successfully." << std::endl;
 
+	std::cout << "Initializing SQLite Database Connection..." << std::endl;
 	// 4. Connect to SQLite
 	fs::path dbPath = exeDir / "database" / "stock_data.db";
 

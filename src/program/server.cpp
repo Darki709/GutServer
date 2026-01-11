@@ -60,6 +60,9 @@ void Gut::Server::serverStart()
 		std::cout << "Failed to create and bind server socket (TCP)" << std::endl;
 		throw;
 	}
+	//wkae up python stock data fetcher
+	Gut::Stock_helper::getInstance();
+	std::cout << "Python stock helper started" << std::endl;
 }
 
 /*===============================*/
