@@ -174,23 +174,6 @@ except Exception as e:
 	std::cout << "Python Environment Initialized Successfully." << std::endl;
 
 	std::cout << "Initializing SQLite Database Connection..." << std::endl;
-	// 4. Connect to SQLite
-	fs::path dbPath = exeDir / "database" / "stock_data.db";
-
-	if (!fs::exists(dbPath.parent_path()))
-	{
-		fs::create_directories(dbPath.parent_path());
-	}
-
-	int rc = sqlite3_open(dbPath.string().c_str(), &db);
-	if (rc != SQLITE_OK)
-	{
-		throw std::runtime_error("SQLite Error: " + std::string(sqlite3_errmsg(db)));
-	}
-
-	// Performance settings for your DB
-	sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
-	sqlite3_exec(db, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, nullptr);
 }
 
 Gut::Stock_helper::~Stock_helper()
@@ -198,15 +181,11 @@ Gut::Stock_helper::~Stock_helper()
 	Py_XDECREF(m_pFunc);
 	Py_XDECREF(m_pModule);
 	Py_Finalize();
-	// clsoe db connection
-	if (db)
-	{
-		sqlite3_close(db);
-	}
 }
 
 void Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 {
+	std::lock_guard<std::mutex> lock(stock_mutex); // only one data fetch at a time
 	std::cout << "C++: Entering fetchLiveData" << std::endl;
 	// aquire GIL safely with RAII
 	struct GILRelease
@@ -263,6 +242,43 @@ Gut::StockData Gut::Stock_helper::getLastRowFromDB(String &symbol)
 {
 	std::cout << "fetching streaming data for " << symbol << std::endl;
 	StockData data = {0}; // Initialize with zeros
+	struct DB_Connection
+	{
+		sqlite3 *db;
+
+		DB_Connection()
+		{
+			// Connect to SQLite
+			wchar_t rawPath[MAX_PATH];
+			GetModuleFileNameW(NULL, rawPath, MAX_PATH);
+			fs::path exeDir = fs::path(rawPath).parent_path();
+			fs::path dbPath = exeDir / "database" / "stock_data.db";
+
+			if (!fs::exists(dbPath.parent_path()))
+			{
+				fs::create_directories(dbPath.parent_path());
+			}
+
+			int rc = sqlite3_open(dbPath.string().c_str(), &db);
+			if (rc != SQLITE_OK)
+			{
+				throw std::runtime_error("SQLite Error: " + std::string(sqlite3_errmsg(db)));
+			}
+
+			// Performance settings for your DB
+			sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+			sqlite3_exec(db, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, nullptr);
+		}
+		~DB_Connection()
+		{
+			if (db)
+			{
+				sqlite3_close(db);
+			}
+		}
+	} db_conn;
+
+	sqlite3 *db = db_conn.db;
 
 	sqlite3_stmt *stmt;
 
