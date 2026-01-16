@@ -86,8 +86,8 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		wchar_t path[MAX_PATH];
 		GetModuleFileNameW(NULL, path, MAX_PATH);
 		std::filesystem::path exePath(path);
-		std::filesystem::path exeDir = exePath.parent_path();								// This is build/Debug/
-		std::filesystem::path dbPath = exeDir.parent_path() / "database" / "stock_data.db"; // Move up one level from Debug to build, then into database
+		std::filesystem::path exeDir = exePath.parent_path(); // This is build/Debug/
+		std::filesystem::path dbPath = exeDir / "database" / "stock_data.db"; // get database path
 		std::string db_path = dbPath.string();
 
 		std::cout << "db path: " << db_path << std::endl;

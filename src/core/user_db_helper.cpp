@@ -10,7 +10,7 @@ Gut::User_table::User_table()
 	GetModuleFileNameW(NULL, path, MAX_PATH);
 	std::filesystem::path exePath(path);
 	std::filesystem::path exeDir = exePath.parent_path();								// This is build/Debug/
-	std::filesystem::path dbPath = exeDir.parent_path() / "database" / "stock_data.db"; // Move up one level from Debug to build, then into database
+	std::filesystem::path dbPath = exeDir / "database" / "stock_data.db"; // db path
 	std::string db_path = dbPath.string();
 
 	// connect to db

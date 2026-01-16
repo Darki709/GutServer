@@ -43,6 +43,7 @@ namespace Gut
 		~Stock_helper();
 		PyObject* m_pModule = nullptr;
     	PyObject* m_pFunc = nullptr;
-		sqlite3 *db;
+
+		std::mutex stock_mutex;
 	};
 }

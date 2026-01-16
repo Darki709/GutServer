@@ -12,7 +12,7 @@
 #include "../stateless/messageCodec.hpp"
 #include "../stateless/streamer.hpp"
 
-#define WORKERCOUNT 2
+#define WORKERCOUNT 6
 
 
 

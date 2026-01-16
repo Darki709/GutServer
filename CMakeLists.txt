@@ -14,13 +14,22 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_link_options(-static-libgcc -static-libstdc++ -pthread)
+endif()
+
+# This forces the use of the static C++ runtime
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # PYTHON (EMBEDDED)
-find_package(Python3 REQUIRED
-	COMPONENTS Interpreter Development
-)
-set(Python3_INCLUDE_DIR "C:/Program Files/WindowsApps/PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0/include")
-set(Python3_LIBRARY_RELEASE "C:/Program Files/WindowsApps/PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0/libs/python313.lib")
+
+set(PYTHON_313_ROOT "C:/Users/NASASuperPC/AppData/Local/Programs/Python/Python313")
+# Point to the headers (.h files)
+set(Python3_INCLUDE_DIR "${PYTHON_313_ROOT}/include")
+set(Python3_LIBRARIES "${PYTHON_313_ROOT}/libs/python313.lib")
+
 
 file(GLOB_RECURSE CPP_SOURCES
 	src/**/*.cpp
@@ -42,6 +51,7 @@ add_executable(gutweb
 # =========================
 set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
 set(OPENSSL_INCLUDE_DIR "C:/Program Files/OpenSSL-Win64/include")
+set(OPENSSL_USE_STATIC_LIBS TRUE)
 find_package(OpenSSL REQUIRED)
 target_include_directories(gutweb
 	PRIVATE
@@ -62,7 +72,7 @@ target_link_libraries(gutweb
 	PRIVATE
 	ws2_32
 	OpenSSL::SSL OpenSSL::Crypto
-	${Python3_LIBRARY_RELEASE}
+	${Python3_LIBRARIES}
 )
 
 # =========================
@@ -78,10 +88,16 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	"C:/Program Files/OpenSSL-Win64/bin/libcrypto-3-x64.dll"
 	$<TARGET_FILE_DIR:${PROJECT_NAME}>)
 add_custom_command(TARGET gutweb POST_BUILD
-    # Create the __init__.py file if it doesn't exist
+    # Create the folder and __init__.py first
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:gutweb>/stockapi
     COMMAND ${CMAKE_COMMAND} -E touch $<TARGET_FILE_DIR:gutweb>/stockapi/__init__.py
-    # Copy your existing scripts
+    # Copy the actual scripts
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/src/stockapi
-    $<TARGET_FILE_DIR:gutweb>/stockapi
+    "${PROJECT_SOURCE_DIR}/src/stockapi"
+    "$<TARGET_FILE_DIR:gutweb>/stockapi"
+)
+add_custom_command(TARGET gutweb POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${PYTHON_313_ROOT}/python313.dll"
+    "$<TARGET_FILE_DIR:gutweb>/python313.dll"
 )

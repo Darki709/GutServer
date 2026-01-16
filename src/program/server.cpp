@@ -60,6 +60,10 @@ void Gut::Server::serverStart()
 		std::cout << "Failed to create and bind server socket (TCP)" << std::endl;
 		throw;
 	}
+	//wkae up python stock data fetcher
+	Gut::Stock_helper::getInstance();
+	std::cout << "Python stock helper started" << std::endl;
+	std::cout << "Server started and listening on port " << DEFAULT_PORT << std::endl;
 }
 
 /*===============================*/
@@ -220,7 +224,6 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 			try
 			{
 				String raw = serverSocket->receive(socket);
-				std::cout << raw << std::endl;
 				if (raw.length() > 0)
 				{
 					client->pushInBuffer(raw);
@@ -235,6 +238,7 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 
 					std::cout << "[FRAME] Socket " << socket << " | Header says next msg is: " << len << " bytes" << std::endl;
 
+					//if the full message is not yet arrived, wait for next recv
 					if (client->getInBuffer().length() < 4 + len)
 					{
 						std::cout << "[WAIT] Need " << (4 + len) - client->getInBuffer().length() << " more bytes for full message." << std::endl;
@@ -358,7 +362,7 @@ bool Gut::Server::taskQueueEmpty()
 }
 
 void Gut::printRawMessage(const std::string& content) {
-    std::cout << "Raw message (" << content.size() << " bytes): ";
+    //std::cout << "Raw message (" << content.size() << " bytes): ";
     for (unsigned char c : content) {
         std::cout << std::hex << std::setw(2) << std::setfill('0')
                   << static_cast<int>(c) << " ";
