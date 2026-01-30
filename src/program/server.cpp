@@ -248,6 +248,7 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 
 					//removes the length bytes before creating the message
 					String msgContent = client->getInBuffer().substr(4, len);
+					std::cout << "[FRAME] Full message of " << msgContent.length() << " bytes received." << std::endl;
 					Message message(msgContent, socket);
 
 					printRawMessage(msgContent);
@@ -282,6 +283,7 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 
 Gut::ClientSet::iterator Gut::Server::kick(Gut::ClientSet::iterator it)
 {
+	std::cout << "Kicking client: " << it->second->getSocket() << std::endl;
 	SOCKET sock = it->second->getSocket();
 	
 	//remove client from streaming list if he is registered
@@ -296,6 +298,7 @@ Gut::ClientSet::iterator Gut::Server::kick(Gut::ClientSet::iterator it)
 
 void Gut::Server::kick(std::shared_ptr<Client> client_ptr)
 {
+	std::cout << "Kicking client: " << client_ptr->getSocket() << std::endl;
 	SOCKET sock = client_ptr->getSocket();
 
 	//remove client from streaming list if he is registered

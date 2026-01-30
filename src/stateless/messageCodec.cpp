@@ -46,10 +46,10 @@ void decrypt(Gut::String& content, Gut::Client& client){
 	const uint8_t* cipherText = reinterpret_cast<const uint8_t*>(content.data());
 	std::vector<uint8_t> out;
 	if(client.getCipher().cipher.decrypt(client.getCipher().recvNonce, cipherText, content.size(), out)){
-		content.assign(out.begin(), out.end());\
+		content.assign(out.begin(), out.end());
 		client.getCipher().recvNonce++;
 	}
-	else throw std::runtime_error("decryption and authentication failed failed");	
+	else throw std::runtime_error("decryption and authentication failed");	
 }
 
 //unframes and gets ready for proccessing

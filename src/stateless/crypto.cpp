@@ -71,16 +71,17 @@ bool Gut::AESGCM::decrypt(
 	size_t len,
 	std::vector<uint8_t> &out)
 {
+	std::cout << len << " " << nonce << std::endl;
 	if (!ctx || len < 16)
 		return false;
-
+	std::cout << len << " " << nonce << std::endl;
 	out.clear();
 	size_t cipherlen = len - 16;
 	const uint8_t *tag = ciphertext + cipherlen;
 
 	if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr))
 		return false;
-
+	std::cout << len << " " << nonce << std::endl;
 	std::array<uint8_t, 12> iv{};
 	uint64_t be_nonce = htonll(nonce);
 	memcpy(iv.data() + 4, &be_nonce, sizeof(be_nonce));

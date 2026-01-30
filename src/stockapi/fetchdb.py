@@ -28,7 +28,7 @@ def price_history_create():
 	c.execute('''CREATE TABLE IF NOT EXISTS price_history
 				 (ticker TEXT,
 		   		  interval TEXT,
-				  date INTEGER NOT NULL,
+				  date BIGINT NOT NULL,
 				  open REAL,
 				  high REAL,
 				  low REAL,

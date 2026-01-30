@@ -38,13 +38,13 @@
 ## Handshake Sequence
 
 1. **HandshakeHello (Client → Server)**
-    - Client generates RSA keypair.
+    - Client generates RSA keypair (PEM base64 encoded rsa key).
     - Sends: Outgoing Type 0 (HANDSHAKEHELLO), Request ID, client public key (PEM)
     - Flag: plaintext (0x00)
 
 2. **Server Response: AES Key**
     - Server generates random AES-256 session key.
-    - Encrypts session key with client’s RSA public key.
+    - Encrypts session key with client’s RSA public key (OAEP padding with SHA1).
     - Sends message: [AES key] as payload
     - Flag: plaintext (0x00)
     - Incoming Type 0 (VERIFY)
@@ -55,19 +55,18 @@
     - send_nonce = 0, recv_nonce = 0
 
 4. **Handshake Verify / Test Message (Client → Server)**
-    - Client encrypts [1B Outgoing MsgType + 4B ReqID + plaintext payload] with AES-GCM
-    - Payload = ciphertext + 16B GCM tag
+    - Client encrypts [1B Outgoing MsgType + 4B ReqID + payload]
+    - Payload = the word "encrypted" encrypted in AES ECB with the new 	  AES key
     - **Flag remains plaintext (0x00)** for this handshake step
     - Outgoing Type 1 (TEST / VERIFY)
-    - Request ID: incremented
 
 5. **Server Handshake Response**
-    - Server decrypts client message using AES-256-GCM and recv_nonce
+    - Server decrypts client message using AES-256-EVP
     - Validates message
     - Sends confirmation: Incoming Type 1 (HANDSHAKE_SUCCESS)
     - Payload: optional
     - Flag: encrypted (0x01)
-    - recv_nonce incremented
+    - send_nonce increments on the server and so the client will increment it's recv_nonce when decrypting this message
 
 
 # Price Data Request Format
@@ -290,7 +289,7 @@ maximum payload length is 1 (username length) + 1 (password length) + 255 (usern
 #Login response
 
 Message type: 5
-[usual header set flag to encrypted][1 byte task type set to 5 LOGIN | 1 byte login response flag:
+[usual header set flag to encrypted][1 byte message type set to 5 LOGIN | 1 byte login response flag:
 if flag is set to 0 SUCCESS it menas user is successfully logged in and can start sending requests to the server \
 if flag is set to 1 i means that the password that was given is wrong, user is required to send the correct password \
-if flag is set to 2 it means that the user that qas requested to be logged in isn't registered in the server]
+if flag is set to 2 it means that the user that has requested to be logged in isn't registered in the server]
