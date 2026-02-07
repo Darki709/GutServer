@@ -10,6 +10,8 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 	// get ticker symbol from the data
 	uint8_t symbolLen = static_cast<uint8_t>(content[0]);
 	content.erase(0, 1);
+	if(content.size() < symbolLen)
+		throw Errors::INVALIDREQUEST;
 	String symbol = content.substr(0, symbolLen);
 	content.erase(0, symbolLen);
 	this->symbol = symbol;
@@ -47,15 +49,15 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 	content.erase(0, 8);
 	memcpy(&end_ts, content.data(), 8);
 	content.erase(0, 8);
-	this->start_ts = ntohll(start_ts);
-	this->end_ts = ntohll(end_ts);
+	this->start_ts = htonll(start_ts);
+	this->end_ts = htonll(end_ts);
 
 	// parse flags
 	uint8_t flags = static_cast<uint8_t>(content[0]);
 	this->stream = (flags & Flags::STREAM) != 0;
 	this->snapshot = (flags & Flags::SNAPSHOT) != 0;
 
-	std::cout << "RequestTickerData started: " << symbol << interval << start_ts << end_ts << stream << snapshot << std::endl;
+	std::cout << "RequestTickerData started: " << symbol << " interval: " << interval << " start_ts: " << this->start_ts << " end_ts: " << this->end_ts << " stream: " << stream << " snapshot: " << snapshot << std::endl;
 }
 
 std::optional<Gut::Message> Gut::RequestTickerData::execute()

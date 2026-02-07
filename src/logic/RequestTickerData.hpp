@@ -6,9 +6,9 @@
 #include "../external/sqlite3.h"
 #include "../stateless/streamer.hpp"
 
+
 namespace Gut
 {
-
 	enum class Flags : uint8_t
 	{
 		SNAPSHOT = 1 << 0, // first bit

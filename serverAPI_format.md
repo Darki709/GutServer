@@ -139,8 +139,6 @@ Request 5-minute candles for `"AAPL"` from `1 Jan 2026 00:00:00 UTC` to `2 Jan 2
 
 This document defines the **server → client** message format used to deliver price (candle) data in response to a price data request.
 
-The format follows the **core Gut protocol rules**: fixed binary layout, no delimiters, no text encoding.
-
 ---
 
 ## Message Overview
@@ -174,7 +172,7 @@ Large datasets are split across **multiple messages**.
 
 ### 3. MsgType
 - **Size:** 1 byte
-- **Value:** `0x03`
+- **Value:** `0x02`
 - **Description:** Price Data Response
 
 ---

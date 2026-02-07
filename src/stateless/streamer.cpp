@@ -166,19 +166,13 @@ void Gut::Streamer::run()
 				// Market Status Check
 				// Only broadcast if the timestamp is within the last 5 minutes
 				std::cout << data.ts << data.open << data.high << data.low << data.close << data.volume << std::endl;
-				if (isMarketLive(data.ts))
+
+				std::lock_guard<std::mutex> lock(streamingListMutex);
+				if (streamingList.contains(symbol))
 				{
-					std::lock_guard<std::mutex> lock(streamingListMutex);
-					if (streamingList.contains(symbol))
-					{
-						std::cout << "data is valid to broadcast" << std::endl;
-						// This calls the binary formatting logic we built
-						streamingList[symbol].broadcast(data, server);
-					}
-				}
-				else
-				{
-					std::cout << "aquired data isn't live data" << std::endl;
+					std::cout << "data is valid to broadcast" << std::endl;
+					// This calls the binary formatting logic we built
+					streamingList[symbol].broadcast(data, server);
 				}
 			}
 			catch (std::exception e)
@@ -189,26 +183,9 @@ void Gut::Streamer::run()
 
 		// Wait for the next minute (interruptible)
 		std::unique_lock<std::mutex> lock(sleepMutex);
-		m_cv.wait_for(lock, std::chrono::minutes(1), [this]
+		m_cv.wait_for(lock, std::chrono::seconds(10), [this]
 					  { return !running; });
 	}
-}
-
-// checks if a unix ts is live or not
-bool Gut::Streamer::isMarketLive(uint64_t dataUnixTime)
-{
-	auto now = std::chrono::system_clock::now();
-	uint64_t currentUnixTime = std::chrono::duration_cast<std::chrono::seconds>(
-								   now.time_since_epoch())
-								   .count();
-	std::cout << currentUnixTime << std::endl;
-	std::cout << dataUnixTime << std::endl;
-
-	const uint64_t STALE_THRESHOLD = 300; // 5 minutes
-
-	if (dataUnixTime > currentUnixTime)
-		return true;
-	return (currentUnixTime - dataUnixTime) < STALE_THRESHOLD;
 }
 
 void Gut::Streamer::shutDown()
@@ -218,18 +195,18 @@ void Gut::Streamer::shutDown()
 	thread.join();	   // 3. Wait for the thread to finish its last tasks
 }
 
-//call only under locked mutex
+// call only under locked mutex
 void Gut::Ticker::removeClient(SOCKET socket, uint32_t reqId)
 {
 	std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
 				  { if(t.clientSocket == socket && t.reqId == reqId){
 					std::cout << "removing client " << socket << std::endl;
-					return true; }});
+					return true; } });
 }
 
 void Gut::Streamer::cancelRequest(String symbol, SOCKET socket, uint32_t reqId)
 {
-	std::cout << "canceling streaming request" << std::endl; 
+	std::cout << "canceling streaming request" << std::endl;
 	std::lock_guard<std::mutex> lock(streamingListMutex);
 	auto it = streamingList.find(symbol);
 	if (it != streamingList.end())
