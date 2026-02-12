@@ -53,7 +53,7 @@ def validate_date_string(date_obj):
 
 #ticker as a string and interval as integer in seconds (according to enum)
 #fetch price data for a live client, defualtly treating data as if client just connected and no data was loaded previously
-#return -1 for fetch error, -2 for db insert error, else returns number of price points fetched
+#return -1 for fetch error, -2 for db insert error, else returns 0 for success
 def fetch_live_data(ticker,  interval ):
 	interval = INTERVAL_MAP[interval]
 	start_date = last_fetch_time(ticker, interval)
@@ -70,7 +70,7 @@ def fetch_live_data(ticker,  interval ):
 			return -1
 	if insert_price_data(ticker, interval, data) == -1:
 		return -2
-	return len(data) if data is not None else 0
+	return 0
 
 
 

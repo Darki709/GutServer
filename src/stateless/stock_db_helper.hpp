@@ -35,7 +35,7 @@ namespace Gut
 	{
 	public:
 		static Stock_helper& getInstance();
-		void fetchLiveData(String& ticker, uint32_t interval);
+		int fetchLiveData(String& ticker, uint32_t interval); // Returns 0 on success, -1 on Python error, -2 on other errors
 		void streamingLoop();
 		StockData getLastRowFromDB(String& symbol);
 	private:

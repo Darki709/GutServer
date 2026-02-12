@@ -183,7 +183,7 @@ Gut::Stock_helper::~Stock_helper()
 	Py_Finalize();
 }
 
-void Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
+int Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 {
 	std::lock_guard<std::mutex> lock(stock_mutex); // only one data fetch at a time
 	std::cout << "C++: Entering fetchLiveData" << std::endl;
@@ -198,12 +198,12 @@ void Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 	if (m_pFunc == nullptr)
 	{
 		fprintf(stderr, "CRASH PREVENTION: m_pFunc is NULL!\n");
-		return;
+		throw std::runtime_error("fetch_live_data function not found in Python module");
 	}
 	if (!PyCallable_Check(m_pFunc))
 	{
 		fprintf(stderr, "CRASH PREVENTION: m_pFunc is not callable!\n");
-		return;
+		throw std::runtime_error("fetch_live_data is not callable");
 	}
 	try
 	{
@@ -211,25 +211,19 @@ void Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 		PyObject *pValue = PyObject_CallObject(m_pFunc, pArgs);
 		Py_DECREF(pArgs);
 		std::cout << "C++: Python Call Returned" << std::endl;
-		if (!pValue)
+		if (pValue)
 		{
-			Py_XDECREF(m_pFunc);
-			Py_XDECREF(m_pModule);
-			throw std::runtime_error("Python fetch_live_data call failed");
-			int rowsFetched = (int)PyLong_AsLong(pValue);
-			Py_XDECREF(pValue);
-			std::cout << rowsFetched << std::endl;
-
-			if (rowsFetched < -1)
-			{
-				throw std::runtime_error("Failed to fetch live data from Python " + std::to_string(rowsFetched)); //-1 for api error -2 for db error
-			}
+			int status = (int)PyLong_AsLong(pValue);
+			Py_XDECREF(pValue);			
+			std::cout << "Python fetch_live_data returned status: " << status << std::endl;
+			return status;
 		}
 	}
 	catch (...)
 	{
 		PyErr_Print();
 	}
+	return -1; // Indicate failure to fetch data
 }
 
 Gut::Stock_helper &Gut::Stock_helper::getInstance()

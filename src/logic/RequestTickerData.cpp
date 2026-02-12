@@ -10,7 +10,7 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 	// get ticker symbol from the data
 	uint8_t symbolLen = static_cast<uint8_t>(content[0]);
 	content.erase(0, 1);
-	if(content.size() < symbolLen)
+	if (content.size() < symbolLen)
 		throw Errors::INVALIDREQUEST;
 	String symbol = content.substr(0, symbolLen);
 	content.erase(0, symbolLen);
@@ -74,21 +74,47 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 	uint32_t reqId = Task::getReqId();
 	std::cout << "proccessing " << std::to_string(reqId) << std::endl;
 
-	// check if user asked for snaphot of historical data
+	// check if user wants to sign up for streaming
+	if (stream)
+	{
+		// sign him up
+		Streamer::getInstance().registerTicket(symbol, Ticket{socket, reqId});
+	}
+
+	// check if user asked for snapshot of historical data
 	if (snapshot)
 	{
-		// load price data from api, if nothig was thrown in means the fetch is ok,
+		// load price data from api, if nothing was thrown in means the fetch is ok,
 		// errors at execution are handled by the worker
-		Stock_helper::getInstance().fetchLiveData(symbol, static_cast<int>(interval));
+		
+		int status = Stock_helper::getInstance().fetchLiveData(symbol, static_cast<int>(interval));
+		switch (status)
+		{
+			case -1:
+				{
+					std::cout << "Failed api call" << std::endl;
+					String content;
+					content.push_back(static_cast<char>(MsgType::SNAPSHOT));
+					uint32_t network_reqId = htonl(reqId);
+					content.append(reinterpret_cast<char *>(&network_reqId), 4);
+					content.push_back(1); // last message
+					uint16_t network_count = htons(0); // 0 candles
+					content.append(reinterpret_cast<char *>(&network_count), 2);
+					return std::make_optional(Message{content, socket});
+				}
+			case -2:
+				throw std::runtime_error("Python error during API call");
+			default:
+				std::cout << "finished api call" << std::endl;
+				break;				
+		}	
 
-		// read data from database
-
-		std::cout << "finished api call" << std::endl;
+		// read data from database		
 		// get db path
 		wchar_t path[MAX_PATH];
 		GetModuleFileNameW(NULL, path, MAX_PATH);
 		std::filesystem::path exePath(path);
-		std::filesystem::path exeDir = exePath.parent_path(); // This is build/Debug/
+		std::filesystem::path exeDir = exePath.parent_path();				  // This is build/Debug/
 		std::filesystem::path dbPath = exeDir / "database" / "stock_data.db"; // get database path
 		std::string db_path = dbPath.string();
 
@@ -200,29 +226,21 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		}
 	}
 
-	// check if user wants to sign up for streaming
-	if (stream)
-	{
-		// sign him up
-		Streamer::getInstance().registerTicket(symbol, Ticket{socket, reqId});
-	}
-
 	// this execute sends the messages by itself
 	return std::nullopt;
 }
+	Gut::PriceData::PriceData(uint64_t date, double open, double close, double low,
+							  double high, uint64_t volume) : date(date), open(open), close(close), low(low), high(high), volume(volume) {}
 
-Gut::PriceData::PriceData(uint64_t date, double open, double close, double low,
-						  double high, uint64_t volume) : date(date), open(open), close(close), low(low), high(high), volume(volume) {}
-
-Gut::String Gut::PriceData::messageFormat()
-{
-	String content;
-	content.reserve(48);
-	append_bytes(content, htonll(date));
-	append_double(content, open);
-	append_double(content, high);
-	append_double(content, low);
-	append_double(content, close);
-	append_bytes(content, htonll(volume));
-	return content;
-}
+	Gut::String Gut::PriceData::messageFormat()
+	{
+		String content;
+		content.reserve(48);
+		append_bytes(content, htonll(date));
+		append_double(content, open);
+		append_double(content, high);
+		append_double(content, low);
+		append_double(content, close);
+		append_bytes(content, htonll(volume));
+		return content;
+	}

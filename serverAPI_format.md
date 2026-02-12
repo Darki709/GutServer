@@ -246,7 +246,7 @@ Candles are packed **back-to-back** with no separators.
 - Parse candles using fixed offsets
 - No dynamic field lengths
 - No delimiters
-
+- If the candle count is 0 and isDone is set to true it means that there is no available data for the exact ticket interval pair
 
 #Stream response message
 
