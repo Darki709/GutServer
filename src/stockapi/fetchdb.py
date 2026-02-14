@@ -50,7 +50,7 @@ def last_fetch_time(ticker, interval):
 	result = c.fetchone()
 	conn.close()
 	if result:
-		print(f"Last fetch time for {ticker} {interval}: {result[0]}")
+		#print(f"Last fetch time for {ticker} {interval}: {result[0]}")
 		date = datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
 		return date
 	else:
@@ -106,14 +106,14 @@ def insert_price_data(ticker, interval, data):
 
         conn.commit()
         update_fetch_time(ticker, interval, data.index[-1].strftime("%Y-%m-%d %H:%M:%S"))
-        print(f"Inserted/Updated {len(rows)} rows for {ticker} {interval} \n")
-        print(rows)
+        #print(f"Inserted/Updated {len(rows)} rows for {ticker} {interval} \n")
+        #print(rows)
         return len(rows)
 
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error inserting price data: {e}")
+        #print(f"Error inserting price data: {e}")
         return -1
 
     finally:

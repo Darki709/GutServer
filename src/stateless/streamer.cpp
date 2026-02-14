@@ -87,7 +87,7 @@ bool Gut::Ticker::isEmpty()
 // recieve the ts ohlc volume data [uint64_t|double|double|double|double|uint64_t]
 void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 {
-	std::cout << "framing streaming message" << std::endl;
+	//std::cout << "framing streaming message" << std::endl;
 	// frame candle data
 	String candle;
 	candle.reserve(48);
@@ -106,9 +106,9 @@ void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 		content += static_cast<uint8_t>(MsgType::STREAM);
 		uint32_t reqId = htonl(ticket.reqId);
 		content.append(reinterpret_cast<char *>(&reqId), 4);
-		Streamer::debugPrintContent(candle);
+		//Streamer::debugPrintContent(candle);
 		content.append(candle.data(), candle.size());
-		Streamer::debugPrintContent(content);
+		//Streamer::debugPrintContent(content);
 		// We pass the socket and the message to your server's outgoing queue
 		server.addMessage(Message{content, ticket.clientSocket});
 	}
