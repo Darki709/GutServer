@@ -13,6 +13,7 @@ namespace Gut
 		STREAM,
 		REGISTER,
 		LOGIN,
+		SEARCHTICKER
 	};
 	
 	class Message

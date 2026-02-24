@@ -23,6 +23,7 @@ namespace Gut
 		REGISTER,
 		REQUESTTICKERDATA,
 		CANCELTICKERSTREAM,
+		SEARCHTICKER,
 	};
 	
 	class Task
