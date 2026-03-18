@@ -306,3 +306,16 @@ Task type: 6
 Message Type: 6
 
 [usual header set flag to encrypted][1 byte message type to 6 SEARCHTICKER | 4 bytes client request id | 1 byte count | [count] tickers in this format: 1 byte ticker name length | ticker name | 1 byte symbol length | symbol | 4 bytes ticker id network byte order]
+
+# Tickers database structure
+
+creation query: 
+
+CREATE TABLE IF NOT EXISTS tickers 
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            exchange TEXT,        # e.g., NASDAQ, NYSE, BINANCE
+            asset_type TEXT,      # e.g., STOCK, CRYPTO, FOREX
+            sector TEXT,          # e.g., Technology, Energy
+            is_active INTEGER DEFAULT 1
