@@ -5,6 +5,7 @@
 #include "CancelTickerStream.hpp"
 #include "registerTask.hpp"
 #include "LoginTask.hpp"
+#include "SearchTicker.hpp"
 #include "../runtime/client.hpp"
 
 std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::shared_ptr<Client> &client)
@@ -41,6 +42,8 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 			return std::make_unique<RegisterTask>(client, reqId, content);
 		case static_cast<int>(TaskType::LOGIN):
 			return std::make_unique<LoginTask>(client, reqId, content);
+		case static_cast<int>(TaskType::SEARCHTICKER):
+			return std::make_unique<SearchTicker>(client, reqId, content);
 		default:
 			return nullptr;
 		}

@@ -297,12 +297,12 @@ if flag is set to 2 it means that the user that has requested to be logged in is
 
 Task type: 6
 
-[usual header set flag to encrypted][1 byte task type set to 6 SEARCHTICKER | 4 bytes client request id | 1 byte length of search word | the word that is searched | 1 byte 0 or 1 to toggle fast search | 1 byte limit | 4 bytes id of last seen ticker for pagination]
-* if fast set is on then the limit is capped at 5 and anything tha comes after this flag will not be read, is fast search is of client can choose how many results to get per request (up to 255) and is required to set the last ticker on his list for faster lookup time because the server uses pagination, the client should use the id of the ticker and not the name of symbol
+[usual header set flag to encrypted][1 byte task type set to 6 SEARCHTICKER | 4 bytes client request id | 1 byte length of search word | the word that is searched | 1 byte 0 or 1 to toggle fast search (isFast) | 1 byte limit | 4 bytes id of last seen ticker for pagination]
+* if isFast is true then the limit is capped at 5 and anything tha comes after this flag won't be read, isFast search is of client can choose how many results to get per request (up to 255) and is required to set the last ticker on his list for faster lookup time because the server uses pagination, the client should use the id of the ticker and not the name of symbol
 
 
 # Search ticker response
 
 Message Type: 6
 
-[usual header set flag to encrypted][1 byte message type to 6 SEARCHTICKER | 4 bytes client request id | 1 byte count | [count] tickers in this format: 1 byte ticker name length | ticker name | 1 byte symbol length | symbol | 4 bytes ticker id]
+[usual header set flag to encrypted][1 byte message type to 6 SEARCHTICKER | 4 bytes client request id | 1 byte count | [count] tickers in this format: 1 byte ticker name length | ticker name | 1 byte symbol length | symbol | 4 bytes ticker id network byte order]

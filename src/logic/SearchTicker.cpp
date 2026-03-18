@@ -4,22 +4,23 @@ namespace Gut
 {
 	SearchTicker::SearchTicker(std::shared_ptr<Client>& client, uint32_t reqId, std::string content)
 		: Task(client, reqId) {
+			std::cout << "started searching" << std::endl;
 			uint8_t querySize = content[0];
 			if (content.size() < querySize + 1) {
 				throw std::runtime_error("Invalid content for SearchTicker task, query size is larger than content size");
 			}
 			query = content.substr(1, querySize);
+			std::cout << query << std::endl;
 			try{
-				content.erase(0, querySize + 1);
+				content.erase(0, querySize+1);
 			} catch (...) {
 				throw std::runtime_error("Invalid content for SearchTicker task, query size is larger than content size");
 			}
 			if(content.empty()) {
-				throw std::runtime_error("Invalid content for SearchTicker task, missing pagination info");
+				throw std::runtime_error("Invalid content for SearchTicker task, missing pagination info.");
 			}
 			uint8_t isFastMode;
 			memcpy(&isFastMode, content.data(), 1);
-			isFastMode = ntohs(isFastMode);
 			content.erase(0, 1);
 			if(isFastMode == 0) {
 				if(content.size() < 5) {
@@ -48,15 +49,16 @@ namespace Gut
 		String msgContent;
 		msgContent.reserve(6);
 		msgContent.push_back(static_cast<char>(MsgType::SEARCHTICKER));
-		msgContent.append(reinterpret_cast<char *>(htonl(Task::getReqId())));
-		msgContent.push_back(static_cast<char>(htons(tickerList->size())));
+		uint32_t netReqId = htonl(Task::getReqId());
+		msgContent.append(reinterpret_cast<char *>(&netReqId), 4);
+		msgContent.push_back(static_cast<char>(tickerList->size()));
 		for(int i=0; i < tickerList->size(); i++){
 			TickerInfo& ticker = tickerList->at(i);
-			msgContent.push_back(static_cast<char>(htons(ticker.name.size())));
+			msgContent.push_back(static_cast<char>(ticker.name.size()));
 			msgContent.append(ticker.name.data());
-			msgContent.push_back(static_cast<char>(htons(ticker.symbol.size())));
+			msgContent.push_back(static_cast<char>(ticker.symbol.size()));
 			msgContent.append(ticker.symbol.data());
-			msgContent.append(reinterpret_cast<char *>(ticker.id));
+			msgContent.append(reinterpret_cast<const char *>(&ticker.id), 4);
 		}
 		return std::make_optional(Message{std::move(msgContent), Task::getClient()->getSocket()});
 	}

@@ -10,7 +10,7 @@ namespace Gut
 		GetModuleFileNameW(NULL, path, MAX_PATH);
 		std::filesystem::path exePath(path);
 		std::filesystem::path exeDir = exePath.parent_path();				   // This is build/Debug/
-		std::filesystem::path dbPath = exeDir / "database" / "ticker_list.db"; // db path
+		std::filesystem::path dbPath = exeDir / "database" / "tickers.db"; // db path
 		std::string db_path = dbPath.string();
 
 		// connect to db
@@ -30,7 +30,7 @@ namespace Gut
 		}
 	}
 
-	const std::unique_ptr<std::vector<TickerInfo>> TickerListDBHelper::getTickerList(String &query, short limit, uint32_t lastTickerId)
+	std::unique_ptr<std::vector<TickerInfo>> TickerListDBHelper::getTickerList(String &query, short limit, uint32_t lastTickerId)
 	{
 		const char *sqlQuery = "SELECT id, name, symbol FROM tickers WHERE (name LIKE ? OR symbol LIKE ?) AND id > ? ORDER BY id ASC LIMIT ?";
 		sqlite3_stmt *stmt;
