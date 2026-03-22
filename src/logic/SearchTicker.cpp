@@ -27,7 +27,6 @@ namespace Gut
 					throw std::runtime_error("Invalid content for SearchTicker task, missing pagination info");
 				}
 				memcpy(&pageSize, content.data(), 1);
-				pageSize = ntohs(pageSize);
 				content.erase(0, 1);
 				memcpy(&lastTickerId, content.data(), 4);
 				lastTickerId = ntohl(lastTickerId);
