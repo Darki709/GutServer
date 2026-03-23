@@ -57,7 +57,8 @@ namespace Gut
 			msgContent.append(ticker.name.data());
 			msgContent.push_back(static_cast<char>(ticker.symbol.size()));
 			msgContent.append(ticker.symbol.data());
-			msgContent.append(reinterpret_cast<const char *>(&ticker.id), 4);
+			uint32_t netId = htonl(ticker.id);
+			msgContent.append(reinterpret_cast<const char *>(&netId), 4);
 		}
 		return std::make_optional(Message{std::move(msgContent), Task::getClient()->getSocket()});
 	}
