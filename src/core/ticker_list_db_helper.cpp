@@ -9,7 +9,7 @@ namespace Gut
 		wchar_t path[MAX_PATH];
 		GetModuleFileNameW(NULL, path, MAX_PATH);
 		std::filesystem::path exePath(path);
-		std::filesystem::path exeDir = exePath.parent_path();				   // This is build/Debug/
+		std::filesystem::path exeDir = exePath.parent_path();			   // This is build/Debug/
 		std::filesystem::path dbPath = exeDir / "database" / "tickers.db"; // db path
 		std::string db_path = dbPath.string();
 
@@ -63,5 +63,55 @@ namespace Gut
 		if (sqlite3_finalize(stmt) != SQLITE_OK)
 			throw std::runtime_error("Failed to finalize statement: " + String(sqlite3_errmsg(db)));
 		return tickerList;
+	}
+
+	TickerInformation TickerListDBHelper::getTickerInfo(String &symbol)
+	{
+		const char *query = "SELECT name, exchange, asset_type, sector FROM tickers WHERE symbol = ?";
+		sqlite3_stmt *stmt = nullptr;
+
+		if (sqlite3_prepare_v2(db, query, -1, &stmt, nullptr) != SQLITE_OK)
+		{
+			throw std::runtime_error("Failed to prepare: " + String(sqlite3_errmsg(db)));
+		}
+		sqlite3_bind_text(stmt, 1, symbol.c_str(), -1, SQLITE_STATIC);
+
+		TickerInformation result;
+		bool found = false;
+
+		if (sqlite3_step(stmt) == SQLITE_ROW)
+		{
+			auto raw_name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+			auto raw_exch = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+			auto raw_type = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+			auto raw_sect = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+
+			result.name = raw_name ? raw_name : "";
+			result.exchange = raw_exch ? raw_exch : "";
+			String s_type = (raw_type ? raw_type : "");
+			result.sector = raw_sect ? raw_sect : "N/A";
+
+			found = true;
+		}
+		sqlite3_finalize(stmt);
+
+		if (!found)
+		{
+			throw std::invalid_argument("Ticker " + symbol + " not found in database");
+		}
+
+		return result;
+	}
+
+	static AssetType stoat(String type)
+	{
+		if (type == "STOCK")
+			return AssetType::STOCK;
+		if (type == "CRYPTO")
+			return AssetType::CRYPTO;
+		if (type == "ETF")
+			return AssetType::ETF;
+		if (type == "FOREX")
+			return AssetType::FOREX;
 	}
 }

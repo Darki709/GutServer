@@ -319,3 +319,22 @@ CREATE TABLE IF NOT EXISTS tickers
             asset_type TEXT,      # e.g., STOCK, CRYPTO, FOREX
             sector TEXT,          # e.g., Technology, Energy
             is_active INTEGER DEFAULT 1
+
+
+# Get Ticker information
+
+Task type: 7
+
+send a symbol get: ticker name, exchange, asset type and sector (if they do not length will be 0)
+
+[usual header set flag to encrypted][1 byte Task type set to 7 TICKERINFO | 4 bytes client request id | 1 byte symbol length | symbol]
+
+
+# Get Ticker Information response
+
+Message type: 7
+
+[usual header set flag to encrypted][1 byte Message type set to 7 TICKERINFO | 4 bytes client request id | 1 byte name length | name | 1 byte exchange length | exchange | 1 byte asset type according to enum | 1 byte sector length | sector]
+
+if name length is 0 it means the symbol doesn't exist in the database
+
