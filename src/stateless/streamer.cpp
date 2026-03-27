@@ -92,10 +92,10 @@ void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 	String candle;
 	candle.reserve(48);
 	append_bytes(candle, htonll(data.ts));
-	append_double(candle, data.open);
-	append_double(candle, data.high);
-	append_double(candle, data.low);
-	append_double(candle, data.close);
+	append_8bytes_num(candle, data.open);
+	append_8bytes_num(candle, data.high);
+	append_8bytes_num(candle, data.low);
+	append_8bytes_num(candle, data.close);
 	append_bytes(candle, htonll(data.volume));
 	// pass data to each client
 	for (auto &ticket : registeredClients)
@@ -183,7 +183,7 @@ void Gut::Streamer::run()
 
 		// Wait for the next minute (interruptible)
 		std::unique_lock<std::mutex> lock(sleepMutex);
-		m_cv.wait_for(lock, std::chrono::seconds(10), [this]
+		m_cv.wait_for(lock, std::chrono::seconds(60), [this]
 					  { return !running; });
 	}
 }

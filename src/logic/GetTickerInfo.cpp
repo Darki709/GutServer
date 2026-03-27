@@ -5,7 +5,9 @@ namespace Gut
 	GetTickerInfo::GetTickerInfo(std::shared_ptr<Client> &client, uint32_t reqId, String symbol) : Task(client, reqId)
 	{
 		this->symbol = symbol;
+		std::cout << "started get ticker info for: " << symbol << std::endl;
 	}
+	
 	std::optional<Message> GetTickerInfo::execute()
 	{
 		TickerListDBHelper helper;

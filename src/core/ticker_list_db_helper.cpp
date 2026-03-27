@@ -19,7 +19,7 @@ namespace Gut
 		{
 			throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
 		}
-		sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+		sqlite3_exec(db, "PRAGMA cache_size = -2000;", nullptr, nullptr, nullptr);
 	}
 	TickerListDBHelper::~TickerListDBHelper()
 	{
@@ -37,7 +37,7 @@ namespace Gut
 		if (sqlite3_prepare_v2(db, sqlQuery, -1, &stmt, nullptr) != SQLITE_OK)
 			throw std::runtime_error("Failed to prepare statement: " + String(sqlite3_errmsg(db)));
 
-		String likeQuery = "%" + query + "%";
+		String likeQuery = query + "%";
 		sqlite3_bind_text(stmt, 1, likeQuery.c_str(), -1, SQLITE_STATIC);
 		sqlite3_bind_text(stmt, 2, likeQuery.c_str(), -1, SQLITE_STATIC);
 		sqlite3_bind_int(stmt, 3, lastTickerId);

@@ -237,10 +237,10 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		String content;
 		content.reserve(48);
 		append_bytes(content, htonll(date));
-		append_double(content, open);
-		append_double(content, high);
-		append_double(content, low);
-		append_double(content, close);
+		append_8bytes_num(content, open);
+		append_8bytes_num(content, high);
+		append_8bytes_num(content, low);
+		append_8bytes_num(content, close);
 		append_bytes(content, htonll(volume));
 		return content;
 	}

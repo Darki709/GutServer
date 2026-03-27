@@ -338,3 +338,52 @@ Message type: 7
 
 if name length is 0 it means the symbol doesn't exist in the database
 
+
+# Get Balance request
+
+Task type: 8
+
+client uses this to get its updated balance
+
+[usual header set flag to encrypted][1 byte Task type set to 8 GETBALANCE | 4 bytes request id]
+
+
+# Get Balance response
+
+Message type: 8
+
+[usual header set flag to encrypted][1 byte Message type set to 8 GETBALANCE | 4 bytes client request id |8 bytes balance as a double]
+
+
+# Send Order
+
+Task type: 9
+
+[usual header set flag to encrypted][1 byte Task type set to 9 SENDORDER | 4 bytes request id | 1 byte order type | 1 byte symbol length | symbol | 4 bytes quantity | 8 bytes asking price as double]
+
+Order types: 0 Long, 1 Short
+
+server will check the updated price of the symbol when proccessing the order, if the asking price isn't within 1% range of the updated price the server will not commit the order (prevents slipage)
+
+# Order responses:
+
+Message type: 9 ORDERCOMMITED
+
+[usual header set flag to encrypted][1 byte Message type set to 9 ORDERCOMMITED | 4 bytes client request i | 8 bytes payed unit price]
+
+if order was commited the server will return the price payed for each unit, the srver will calculate the clients new balance and the client will do the same on its side.
+
+Message type: 10 INVALIDORDER
+
+[usual header set flag to encrypted][1 byte Message type set to 10 INVALIDORDER | 4 bytes client request i | 1 byte status]
+
+statuses:
+	INVALIDBALANCE 0, not enough money in users balance to execute the order
+	INVALIDSYMBOL 1, symbol doesnt exist in the server's database
+
+Message type: 11 ORDERSLIPPED
+
+[usual header set flag to encrypted][1 byte Message type set to 11 ORDERSLIPPED]
+
+means the asking price is not within 1% range of the market price, order isn't executed to prevent slipage
+

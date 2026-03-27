@@ -4,6 +4,7 @@
 #include "../libraries.hpp"
 #include "../core/message.hpp"
 #include "../stateless/crypto.hpp"
+#include "../core/user_db_helper.hpp"
 
 
 namespace Gut
@@ -18,6 +19,7 @@ namespace Gut
 	struct AuthContext {
     	UsrID userId;
     	String username;
+		double balance;
 	};
 
 	struct CryptoContext {

@@ -46,7 +46,8 @@ namespace Gut
 		out.append(reinterpret_cast<const char *>(&value), sizeof(T));
 	}
 
-	inline void append_double(String &s, double v)
+	
+	inline void append_8bytes_num(String &s, double v)
 	{
 		uint64_t tmp;
 		static_assert(sizeof(double) == 8);
