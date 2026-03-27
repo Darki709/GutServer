@@ -262,7 +262,7 @@ task type number: 5
 
 [header as usual set to notify encrypted message][1 byte task type set to 5 CANCELTIKCERSTREAM |4 bytes client request id | 4 bytes request id of the original streaming request (network byte order) |1 bytes length of the symbol | the symbol in length bytes]
 
-#Register User request
+# Register User request
 
 Task type: 3
 
@@ -277,7 +277,7 @@ if flag is set to 0 SUCCESS it menas user is successfully registered, user must 
 if flag is set to 1 it means the username is already taken, user must send a new register request with a different username \
 if flag is set to 2 it means the pass is insecure, the remainder of te message is now the password strength checker feedback ]
 
-#Login request
+# Login request
 
 Task type: 2
 
@@ -291,3 +291,31 @@ Message type: 5
 if flag is set to 0 SUCCESS it menas user is successfully logged in and can start sending requests to the server \
 if flag is set to 1 i means that the password that was given is wrong, user is required to send the correct password \
 if flag is set to 2 it means that the user that has requested to be logged in isn't registered in the server]
+
+
+# Search for ticker request
+
+Task type: 6
+
+[usual header set flag to encrypted][1 byte task type set to 6 SEARCHTICKER | 4 bytes client request id | 1 byte length of search word | the word that is searched | 1 byte 0 or 1 to toggle fast search (isFast) | 1 byte limit | 4 bytes id of last seen ticker for pagination]
+* if isFast is true then the limit is capped at 5 and anything tha comes after this flag won't be read, isFast search is of client can choose how many results to get per request (up to 255) and is required to set the last ticker on his list for faster lookup time because the server uses pagination, the client should use the id of the ticker and not the name of symbol
+
+
+# Search ticker response
+
+Message Type: 6
+
+[usual header set flag to encrypted][1 byte message type to 6 SEARCHTICKER | 4 bytes client request id | 1 byte count | [count] tickers in this format: 1 byte ticker name length | ticker name | 1 byte symbol length | symbol | 4 bytes ticker id network byte order]
+
+# Tickers database structure
+
+creation query: 
+
+CREATE TABLE IF NOT EXISTS tickers 
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            exchange TEXT,        # e.g., NASDAQ, NYSE, BINANCE
+            asset_type TEXT,      # e.g., STOCK, CRYPTO, FOREX
+            sector TEXT,          # e.g., Technology, Energy
+            is_active INTEGER DEFAULT 1
