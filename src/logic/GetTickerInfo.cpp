@@ -14,7 +14,7 @@ namespace Gut
 		String content;
 		uint32_t n_reqId = htonl(Task::getReqId());
 		content.push_back(static_cast<uint8_t>(TaskType::TICKERINFO));
-		content.append(reinterpret_cast<char *>(n_reqId));
+		content.append(reinterpret_cast<char *>(n_reqId), 4);
 		TickerInformation info;
 		try
 		{

@@ -11,7 +11,8 @@ namespace Gut{
 		content.push_back(static_cast<uint8_t>(MsgType::GETBALANCE));
 		uint32_t reqid = Task::getReqId();
 		uint32_t n_reqId = htonl(reqid);
-		content.append(reinterpret_cast<char *>(&n_reqId));
+		content.append(reinterpret_cast<char *>(&n_reqId), 4);
+		std::cout << Task::getClient()->getCredentials().username << " balance is: " << std::to_string(balance) << std::endl;
 		append_8bytes_num(content, balance);
 		return Message{content ,Task::getClient()->getSocket()};
 	}

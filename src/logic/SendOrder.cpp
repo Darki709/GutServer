@@ -56,7 +56,7 @@ namespace Gut
 
 		// prepare the message header
 		String content;
-		char *n_reqId = reinterpret_cast<char *>(htonl(Task::getReqId()), 4);
+		char *n_reqId = reinterpret_cast<char *>(htonl(Task::getReqId()));
 
 		// first we check that the order has valid authentication
 		User_table user_helper;
@@ -153,7 +153,7 @@ namespace Gut
 		append_8bytes_num(content, latest_price);
 		append_8bytes_num(content, ts);
 		uint32_t n_orderId = htonl(orderId);
-		content.append(reinterpret_cast<char *>(&n_orderId, 4));
+		content.append(reinterpret_cast<char *>(&n_orderId), 4);
 		return Message{content, Task::getClient()->getSocket()};
 	}
 }
