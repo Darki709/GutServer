@@ -1,9 +1,21 @@
+#pragma once
 #include "../external/sqlite3.h"
 #include "../libraries.hpp"
 #include "db_utilities.hpp"
 
 namespace Gut
 {
+
+	enum class OrderType : uint8_t{
+		LONG,
+		SHORT
+	};
+
+	enum class OrderView : uint8_t{
+		ACTIVE,
+		INACTIVE
+	};
+
 	class Order
 	{
 	private:
@@ -38,15 +50,7 @@ namespace Gut
     uint32_t offset = 0;
 	};
 
-	enum class OrderView : uint8_t{
-		ACTIVE,
-		INACTIVE
-	};
 
-	enum class OrderType : uint8_t{
-		LONG,
-		SHORT
-	};
 
 	static OrderType orderTypeFromInt(int type){
 		switch(type){
@@ -59,21 +63,19 @@ namespace Gut
 		}
 	}
 
-	class OrdersTable : protected Table_helper
+	class OrdersTable : public Table_helper
 	{
-	private:
-		sqlite3 *db;
-
 	public:
 		OrdersTable();
+		OrdersTable(sqlite3 *db);
 		~OrdersTable() = default;
 		uint32_t setOrder(Order &order);  // returns order id on success
-		double closeOrder(UsrID orderId, double end_price, uint64_t end_ts); // returns price paid for the order (entry_price * quantity), -1 if order doesnt exist
+		double closeOrder(UsrID orderId, double end_price, uint64_t end_ts); // returns the profit/loss for the order (checks the order type then return p/l as signed double), throws if there are errors
 		std::vector<Order> fetchOrders(const OrderFilters& filter); //fetches all users orders according to action
 	};
 
 	//table creation query
-	const String create_order_table_query = R"(
+	inline const String create_order_table_query = R"(
 	CREATE TABLE orders (
     order_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL, 

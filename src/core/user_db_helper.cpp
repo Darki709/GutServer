@@ -221,3 +221,33 @@ double Gut::User_table::getBalance(uint32_t usrId){
 	}
 	else throw std::invalid_argument("no user exists with id: " + std::to_string(usrId));
 }
+
+// Inside User_table.cpp
+double Gut::User_table::updateBalance(UsrID userId, double amount) {
+    // We fetch the new balance using RETURNING so the C++ side is synced
+    // The WHERE clause ensures we don't accidentally push a balance below zero
+    // (Optional: remove 'AND balance + ? >= 0' if you allow debt/margin)
+    const char* query = R"(
+        UPDATE users 
+        SET balance = balance + ? 
+        WHERE user_id = ? AND (balance + ? >= 0)
+        RETURNING balance;
+    )";
+
+    Gut::SecureStmt stmt{nullptr};
+    if (sqlite3_prepare_v2(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK) {
+        throw std::runtime_error("Failed to prepare updateBalance");
+    }
+
+    sqlite3_bind_double(stmt.stmt, 1, amount);
+    sqlite3_bind_int(stmt.stmt, 2, userId);
+    sqlite3_bind_double(stmt.stmt, 3, amount);
+
+    if (sqlite3_step(stmt.stmt) == SQLITE_ROW) {
+        // Return the NEW balance after the math is done
+        return sqlite3_column_double(stmt.stmt, 0);
+    }
+
+    // If no row was updated (e.g., balance would have gone negative)
+    return -1.0; 
+}

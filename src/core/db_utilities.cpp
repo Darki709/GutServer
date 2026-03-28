@@ -11,6 +11,14 @@ namespace Gut{
 		if(db) sqlite3_close(db);
 	}
 
+	Table_helper::Table_helper(sqlite3 *db){
+		this->db = db;
+	}
+
+	sqlite3* Table_helper::getHandle(){
+		return this->db;
+	}
+
 	Table_helper::Table_helper(){
 		// get db connection
 		//  get the db path
@@ -29,4 +37,16 @@ namespace Gut{
 		}
 		sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
 	}
+
+	TransactionGuard::TransactionGuard(sqlite3* db) : db(db) {
+        sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+    }
+    TransactionGuard::~TransactionGuard() {
+        if (!committed) sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr);
+    }
+    void TransactionGuard::commit() {
+        if (sqlite3_exec(db, "COMMIT;", nullptr, nullptr, nullptr) == SQLITE_OK) {
+            committed = true;
+        }
+    }
 }

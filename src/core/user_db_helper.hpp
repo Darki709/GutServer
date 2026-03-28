@@ -11,7 +11,7 @@
 
 
 namespace Gut{
-	class User_table : protected Table_helper{
+	class User_table : public Table_helper{
 		private:
 			const String PEPPER = "pepper";
 			bool isSecurePassword(const String& password, String& feedback);
@@ -22,7 +22,8 @@ namespace Gut{
 			int addUser(String username, String password); //0 for success, -1 for user exists , throws back the feedback if password is insecure
 			uint32_t authenticateUser(String username, String password);//return usrid for success, -1 for wrong password, -2 for user doesn't exist
 			double getBalance(uint32_t client_id);
+			double updateBalance(UsrID usrId ,double amount);//insert a signed amount of money to be deducted or added to the user's balance
 	};
 
-	const char *query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, salt TEXT NOT NULL, money REAL NOT NULL)";
+	inline const char *query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, salt TEXT NOT NULL, money REAL NOT NULL)";
 }

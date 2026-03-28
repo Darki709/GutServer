@@ -2,11 +2,11 @@
 
 namespace Gut
 {
-	explicit Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity) : symbol(symbol), usrId(usrId), entry_ts(ts),
+	Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity) : symbol(symbol), usrId(usrId), entry_ts(ts),
 																													  entry_price(unit_price), quantity(quantity), active(true), end_price(std::nullopt), end_ts(std::nullopt), type(type) {}
-	explicit Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, UsrID orderId) : symbol(symbol),
+	Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, UsrID orderId) : symbol(symbol),
 																																	 usrId(usrId), entry_ts(ts), entry_price(unit_price), quantity(quantity), orderId(orderId), active(true), end_price(std::nullopt), end_ts(std::nullopt), type(type) {}
-	explicit Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, UsrID orderId, uint64_t end_ts, double end_price) : symbol(symbol), usrId(usrId), entry_ts(ts), entry_price(unit_price), quantity(quantity), orderId(orderId), active(false), end_price(end_price), end_ts(end_ts), type(type) {}
+	Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, UsrID orderId, uint64_t end_ts, double end_price) : symbol(symbol), usrId(usrId), entry_ts(ts), entry_price(unit_price), quantity(quantity), orderId(orderId), active(false), end_price(end_price), end_ts(end_ts), type(type) {}
 
 	bool Order::is_active()
 	{
@@ -188,4 +188,6 @@ namespace Gut
 		throw std::runtime_error("Order Close Failed: Order ID " + std::to_string(orderId) +
 								 " not found or already inactive.");
 	}
+
+	OrdersTable::OrdersTable(sqlite3 *db) : Table_helper(db){}
 }

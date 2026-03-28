@@ -22,6 +22,7 @@
 #include <iomanip>
 #include <filesystem>
 #include <algorithm>
+#include <chrono>
 
 namespace Gut
 {

@@ -359,17 +359,19 @@ Message type: 8
 
 Task type: 9
 
-[usual header set flag to encrypted][1 byte Task type set to 9 SENDORDER | 4 bytes request id | 1 byte order type | 1 byte symbol length | symbol | 4 bytes quantity | 8 bytes asking price as double]
+[usual header set flag to encrypted][1 byte Task type set to 9 SENDORDER | 4 bytes request id | 1 byte order type | 1 byte symbol length | symbol | 4 bytes quantity | 8 bytes asking price as double | 1 byte password length | password ]
 
 Order types: 0 Long, 1 Short
 
 server will check the updated price of the symbol when proccessing the order, if the asking price isn't within 1% range of the updated price the server will not commit the order (prevents slipage)
 
+the client will need to send its password in order to authenticate every action
+
 # Order responses:
 
 Message type: 9 ORDERCOMMITED
 
-[usual header set flag to encrypted][1 byte Message type set to 9 ORDERCOMMITED | 4 bytes client request i | 8 bytes payed unit price]
+[usual header set flag to encrypted][1 byte Message type set to 9 ORDERCOMMITED | 4 bytes client request i | 8 bytes paid price per unit in double | 8 bytes the commit ts in seconds | 4 bytes order id]
 
 if order was commited the server will return the price payed for each unit, the srver will calculate the clients new balance and the client will do the same on its side.
 
@@ -379,11 +381,11 @@ Message type: 10 INVALIDORDER
 
 statuses:
 	INVALIDBALANCE 0, not enough money in users balance to execute the order
-	INVALIDSYMBOL 1, symbol doesnt exist in the server's database
+	INVALIDSYMBOL 1, symbol doesnt exist in the server's database or isn't available for orders
 
 Message type: 11 ORDERSLIPPED
 
-[usual header set flag to encrypted][1 byte Message type set to 11 ORDERSLIPPED]
+[usual header set flag to encrypted][1 byte Message type set to 11 ORDERSLIPPED | client request id]
 
 means the asking price is not within 1% range of the market price, order isn't executed to prevent slipage
 
