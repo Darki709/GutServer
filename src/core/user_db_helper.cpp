@@ -229,14 +229,14 @@ double Gut::User_table::updateBalance(UsrID userId, double amount) {
     // (Optional: remove 'AND balance + ? >= 0' if you allow debt/margin)
     const char* query = R"(
         UPDATE users 
-        SET balance = balance + ? 
-        WHERE user_id = ? AND (balance + ? >= 0)
-        RETURNING balance;
+        SET money = money + ? 
+        WHERE id = ? AND (money + ? >= 0)
+        RETURNING money;
     )";
 
     Gut::SecureStmt stmt{nullptr};
-    if (sqlite3_prepare_v2(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare updateBalance");
+    if (sqlite3_prepare(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK) {
+        throw std::runtime_error("Failed to prepare updateBalance " + String(sqlite3_errmsg(db)));
     }
 
     sqlite3_bind_double(stmt.stmt, 1, amount);

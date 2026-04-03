@@ -89,6 +89,7 @@ namespace Gut
 			result.name = raw_name ? raw_name : "";
 			result.exchange = raw_exch ? raw_exch : "";
 			String s_type = (raw_type ? raw_type : "");
+			result.type = stoat(s_type);
 			result.sector = raw_sect ? raw_sect : "N/A";
 
 			found = true;
@@ -103,7 +104,7 @@ namespace Gut
 		return result;
 	}
 
-	static AssetType stoat(String type)
+	static AssetType stoat(String &type)
 	{
 		if (type == "STOCK")
 			return AssetType::STOCK;
@@ -113,5 +114,6 @@ namespace Gut
 			return AssetType::ETF;
 		if (type == "FOREX")
 			return AssetType::FOREX;
+		return AssetType::OTHER;
 	}
 }

@@ -25,7 +25,7 @@ namespace Gut
 		uint64_t entry_ts;
 		double entry_price;
 		int quantity;
-		UsrID orderId = -1; //if order still has no id (new order before entered to db)
+		UsrID orderId = 0; //if order still has no id (new order before entered to db)
 		bool active;
 		std::optional<uint64_t> end_ts;
 		std::optional<double> end_price;

@@ -363,7 +363,7 @@ Task type: 9
 
 Order types: 0 Long, 1 Short
 
-server will check the updated price of the symbol when proccessing the order, if the asking price isn't within 1% range of the updated price the server will not commit the order (prevents slipage)
+server will check the updated price of the symbol when proccessing the order, if the asking price isn't within 1% range of the updated price the server will not commit the order (prevents slippage)
 
 the client will need to send its password in order to authenticate every action
 

@@ -34,7 +34,10 @@ namespace Gut
 		if (offset + 8 > content.size())
 			throw std::runtime_error("Invalid SendOrder: price missing");
 		// Direct memory copy to preserve double precision
-		memcpy(&this->asking_price, &content[offset], 8);
+		uint64_t netPrice;
+		memcpy(&netPrice, &content[offset], 8);
+		uint64_t hostPrice = _byteswap_uint64(netPrice);
+		memcpy(&this->asking_price, &hostPrice, 8);
 		offset += 8;
 
 		// 5. 1 byte password length + password
@@ -56,13 +59,16 @@ namespace Gut
 
 		// prepare the message header
 		String content;
-		char *n_reqId = reinterpret_cast<char *>(htonl(Task::getReqId()));
+		uint32_t reqId = htonl(Task::getReqId());
+		char *n_reqId = reinterpret_cast<char *>(&reqId);
 
 		// first we check that the order has valid authentication
-		User_table user_helper;
-		if (user_helper.authenticateUser(client->getCredentials().username, this->password) < 0)
 		{
-			throw Errors::ILLEGALACCESS; // client will be automatically kicked for breaking the api rules
+			User_table user_helper;
+			if (user_helper.authenticateUser(client->getCredentials().username, this->password) < 0)
+			{
+				throw Errors::ILLEGALACCESS; // client will be automatically kicked for breaking the api rules
+			}
 		}
 
 		// client passed authentication, now we check that the symbol is valid
@@ -75,7 +81,7 @@ namespace Gut
 			catch (std::invalid_argument invalid_err)
 			{
 				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
-				content.append(n_reqId);
+				content.append(n_reqId, 4);
 				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDSYMBOL));
 				return Message{content, Task::getClient()->getSocket()};
 			}
@@ -87,7 +93,7 @@ namespace Gut
 		if ((this->asking_price * this->quantity) > user_balance)
 		{
 			content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
-			content.append(n_reqId);
+			content.append(n_reqId, 4);
 			content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDBALANCE));
 			return Message{content, Task::getClient()->getSocket()};
 		}
@@ -99,7 +105,7 @@ namespace Gut
 			if (stock_helper.fetchLiveData(this->symbol, static_cast<uint32_t>(Interval::MIN_1)) != 0)
 			{
 				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
-				content.append(n_reqId);
+				content.append(n_reqId, 4);
 				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDSYMBOL));
 				return Message{content, Task::getClient()->getSocket()};
 			}
@@ -108,10 +114,30 @@ namespace Gut
 
 		// check for price slip
 		double latest_price = latest_data.close;
-		if (!((latest_price > 0.99 * this->asking_price) && (latest_price < 1.01 * this->asking_price)))
+		bool is_slipped = false;
+
+		if (type == OrderType::LONG)
+		{
+			// If buying, we only care if the price jumped ABOVE our limit
+			if (latest_price > 1.01 * this->asking_price)
+			{
+				is_slipped = true;
+			}
+		}
+		else if (type == OrderType::SHORT)
+		{
+			// If selling, we only care if the price dropped BELOW our limit
+			if (latest_price < 0.99 * this->asking_price)
+			{
+				is_slipped = true;
+			}
+		}
+
+		if (is_slipped)
 		{
 			content.push_back(static_cast<uint8_t>(MsgType::ORDERSLIPPED));
-			content.append(n_reqId);
+			// SAFE APPEND: Use the address of the ID and specify 4 bytes
+			content.append(n_reqId, 4);
 			return Message{content, Task::getClient()->getSocket()};
 		}
 
@@ -119,7 +145,7 @@ namespace Gut
 		if ((latest_price * this->quantity) > user_balance)
 		{
 			content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
-			content.append(n_reqId);
+			content.append(n_reqId, 4);
 			content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDBALANCE));
 			return Message{content, Task::getClient()->getSocket()};
 		}
@@ -129,8 +155,9 @@ namespace Gut
 		UsrID orderId;
 
 		Order order{this->symbol, Task::getClient()->getCredentials().userId, this->type, ts, latest_price, this->quantity};
-		
+
 		{
+			User_table user_helper;
 			TransactionGuard transaction{user_helper.getHandle()};
 
 			OrdersTable ordersDB{user_helper.getHandle()};
@@ -140,7 +167,7 @@ namespace Gut
 			if (newBalance < 0)
 			{
 				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
-				content.append(n_reqId);
+				content.append(n_reqId, 4);
 				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDBALANCE));
 				return Message{content, Task::getClient()->getSocket()};
 			}
@@ -149,7 +176,7 @@ namespace Gut
 
 		// order is committed in the db and now we send back the update order info to the client
 		content.push_back(static_cast<uint8_t>(MsgType::ORDERCOMMITED));
-		content.append(n_reqId);
+		content.append(n_reqId, 4);
 		append_8bytes_num(content, latest_price);
 		append_8bytes_num(content, ts);
 		uint32_t n_orderId = htonl(orderId);

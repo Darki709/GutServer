@@ -9,7 +9,8 @@ namespace Gut
 		STOCK,
 		CRYPTO,
 		ETF,
-		FOREX		
+		FOREX,
+		OTHER		
 	};
 	struct TickerInfo
 	{
