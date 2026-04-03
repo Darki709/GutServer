@@ -25,5 +25,5 @@ namespace Gut{
 			double updateBalance(UsrID usrId ,double amount);//insert a signed amount of money to be deducted or added to the user's balance
 	};
 
-	inline const char *query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, salt TEXT NOT NULL, money REAL NOT NULL)";
+	inline const char *query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, salt TEXT NOT NULL, money REAL NOT NULL DEFAULT 1000000)";
 }
