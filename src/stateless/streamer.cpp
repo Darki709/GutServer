@@ -28,6 +28,20 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
 	// check if a list for the ticker already exists and creates a new ticker if required
 	streamingList[symbol].addClient(ticket);
 	std::cout << "new client added to " << symbol << std::endl;
+
+	try {
+        // Optional: Call fetchLiveData(symbol, 1) if you want a fresh tick immediately
+        // Stock_helper::getInstance().fetchLiveData(symbol, 1);
+        
+        StockData lastData = Stock_helper::getInstance().getLastRowFromDB(symbol);
+        
+        // 3. Send ONLY to this new client
+        streamingList[symbol].broadcastToSingleClient(ticket, lastData, server);
+        
+        std::cout << "Instant price sent to new client for " << symbol << std::endl;
+    } catch (...) {
+        std::cerr << "Failed to send instant update for " << symbol << std::endl;
+    }
 }
 
 void Gut::Streamer::removeClient(SOCKET socket)
@@ -72,6 +86,26 @@ void Gut::Ticker::removeClient(SOCKET socket)
 bool Gut::Ticker::isEmpty()
 {
 	return registeredClients.empty();
+}
+
+void Gut::Ticker::broadcastToSingleClient(Ticket ticket, StockData data, Gut::Server &server) {
+    String candle;
+    candle.reserve(48);
+    append_bytes(candle, htonll(data.ts));
+    append_8bytes_num(candle, data.open);
+    append_8bytes_num(candle, data.high);
+    append_8bytes_num(candle, data.low);
+    append_8bytes_num(candle, data.close);
+    append_bytes(candle, htonll(data.volume));
+
+    String content;
+    content.reserve(53);
+    content += static_cast<uint8_t>(MsgType::STREAM);
+    uint32_t reqId = htonl(ticket.reqId);
+    content.append(reinterpret_cast<char *>(&reqId), 4);
+    content.append(candle.data(), candle.size());
+
+    server.addMessage(Message{content, ticket.clientSocket});
 }
 
 // recieve the ts ohlc volume data [uint64_t|double|double|double|double|uint64_t]

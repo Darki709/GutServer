@@ -24,7 +24,8 @@ namespace Gut
 		void removeClient(SOCKET socket);
 		void removeClient(SOCKET socket, uint32_t reqId);
 		bool isEmpty();
-		void broadcast(StockData data, Gut::Server& server);		
+		void broadcast(StockData data, Gut::Server& server);	
+		void broadcastToSingleClient(Ticket ticket, StockData data, Gut::Server &server);	
 	};
 
 	// class encapsulating a thread responsible for fetching data to stream to clients
