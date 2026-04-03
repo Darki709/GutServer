@@ -387,5 +387,29 @@ Message type: 11 ORDERSLIPPED
 
 [usual header set flag to encrypted][1 byte Message type set to 11 ORDERSLIPPED | client request id]
 
-means the asking price is not within 1% range of the market price, order isn't executed to prevent slipage
+means the asking price is not within 1% range of the market price, order isn't executed to prevent slippage
 
+
+# Fetch User Orders
+Task type: 10
+
+Requests a list of orders associated with the current user. Filters can be applied for specific symbols or views (Active/Inactive).
+
+Request Layout:
+[usual header set flag to encrypted]
+[1 byte Task type set to 10 FETCH_ORDERS | 4 bytes client request id | 1 byte symbol length (0 for all) | symbol (optional) | 1 byte view filter (0: All, 1: Active, 2: Inactive) | 4 bytes limit | 4 bytes offset]
+
+# Fetch User Orders Response
+Message type: 12
+
+Returns a serialized list of orders. If the user has no orders, the order count will be 0.
+
+Response Layout:
+[usual header set flag to encrypted]
+[1 byte Message type set to 12 FETCH_ORDERS | 4 bytes client request id | 4 bytes order count (N)]
+
+Followed by N instances of the Order Block:
+[1 byte symbol length | symbol | 4 bytes order id | 1 byte order type (0: LONG, 1: SHORT) | 8 bytes entry price (double) | 8 bytes entry ts (uint64) | 4 bytes quantity | 1 byte is active (1: active, 0: inactive)]
+
+If and only if is active is 0 (Inactive), the following bytes are appended to that specific order block:
+[8 bytes end price (double) | 8 bytes end ts (uint64)]

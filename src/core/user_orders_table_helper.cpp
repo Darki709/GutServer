@@ -30,8 +30,8 @@ namespace Gut
 		formatted_order.push_back(active);
 		if (!active && end_ts.has_value() && end_price.has_value())
 		{
-			append_8bytes_num(formatted_order, end_ts.value());
 			append_8bytes_num(formatted_order, end_price.value());
+			append_8bytes_num(formatted_order, end_ts.value());
 		}
 		return std::move(formatted_order);
 	}
@@ -138,6 +138,7 @@ namespace Gut
 				results.emplace_back(sym, usr, type, ts, price, qty, id, endTs, endPrice);
 			}
 		}
+		std::cout << "[DEBUG] Fetched " << results.size() << " orders for User ID: " << filters.userId << std::endl;
 		return results;
 	}
 

@@ -178,10 +178,13 @@ except Exception as e:
 
 Gut::Stock_helper::~Stock_helper()
 {
+	PyGILState_STATE gstate = PyGILState_Ensure(); // Acquire GIL
 	Py_XDECREF(m_pFunc);
 	Py_XDECREF(m_pModule);
+	PyGILState_Release(gstate); // Release before Finalize	
 	Py_Finalize();
 }
+
 
 int Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 {
@@ -214,7 +217,7 @@ int Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 		if (pValue)
 		{
 			int status = (int)PyLong_AsLong(pValue);
-			Py_XDECREF(pValue);			
+			Py_XDECREF(pValue);
 			std::cout << "Python fetch_live_data returned status: " << status << std::endl;
 			return status;
 		}
