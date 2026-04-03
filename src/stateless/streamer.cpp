@@ -56,17 +56,7 @@ void Gut::Streamer::removeClient(SOCKET socket)
 
 void Gut::Ticker::addClient(Ticket client)
 {
-	// Check if the client is already in the list to prevent duplicates
-	auto it = std::find_if(registeredClients.begin(), registeredClients.end(),
-						   [&client](const Ticket &t)
-						   {
-							   return t.clientSocket == client.clientSocket;
-						   });
-
-	if (it == registeredClients.end())
-	{
-		registeredClients.push_back(client);
-	}
+	registeredClients.push_back(client);
 	std::cout << "client " << client.clientSocket << " registered to streaming" << std::endl;
 }
 
@@ -87,8 +77,8 @@ bool Gut::Ticker::isEmpty()
 // recieve the ts ohlc volume data [uint64_t|double|double|double|double|uint64_t]
 void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 {
-	//std::cout << "framing streaming message" << std::endl;
-	// frame candle data
+	// std::cout << "framing streaming message" << std::endl;
+	//  frame candle data
 	String candle;
 	candle.reserve(48);
 	append_bytes(candle, htonll(data.ts));
@@ -106,10 +96,10 @@ void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 		content += static_cast<uint8_t>(MsgType::STREAM);
 		uint32_t reqId = htonl(ticket.reqId);
 		content.append(reinterpret_cast<char *>(&reqId), 4);
-		//Streamer::debugPrintContent(candle);
+		// Streamer::debugPrintContent(candle);
 		content.append(candle.data(), candle.size());
-		//Streamer::debugPrintContent(content);
-		// We pass the socket and the message to your server's outgoing queue
+		// Streamer::debugPrintContent(content);
+		//  We pass the socket and the message to your server's outgoing queue
 		server.addMessage(Message{content, ticket.clientSocket});
 	}
 }

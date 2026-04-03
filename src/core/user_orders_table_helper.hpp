@@ -13,7 +13,8 @@ namespace Gut
 
 	enum class OrderView : uint8_t{
 		ACTIVE,
-		INACTIVE
+		INACTIVE,
+		ALL
 	};
 
 	class Order
