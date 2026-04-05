@@ -92,6 +92,7 @@ namespace Gut
 
 		if ((this->asking_price * this->quantity) > user_balance)
 		{
+			std::cout << "user doesnt have enough balance: diff " << std::to_string(user_balance) << std::endl;
 			content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
 			content.append(n_reqId, 4);
 			content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDBALANCE));
@@ -144,6 +145,7 @@ namespace Gut
 		// after the slip check we need to check again the client balance
 		if ((latest_price * this->quantity) > user_balance)
 		{
+			std::cout << "user doesnt have enough balance: diff " << std::to_string(user_balance) << std::endl;
 			content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
 			content.append(n_reqId, 4);
 			content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDBALANCE));
@@ -166,6 +168,7 @@ namespace Gut
 			double newBalance = user_helper.updateBalance(Task::getClient()->getCredentials().userId, -(this->quantity * latest_price));
 			if (newBalance < 0)
 			{
+				std::cout << "user doesnt have enough balance: diff " << std::to_string(newBalance) << std::endl;
 				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
 				content.append(n_reqId, 4);
 				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDBALANCE));
