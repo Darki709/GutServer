@@ -2,11 +2,11 @@
 
 namespace Gut
 {
-	Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity) : symbol(symbol), usrId(usrId), entry_ts(ts),
+	Order::Order(String symbol, ID usrId, OrderType type, uint64_t ts, double unit_price, int quantity) : symbol(symbol), usrId(usrId), entry_ts(ts),
 																													  entry_price(unit_price), quantity(quantity), active(true), end_price(std::nullopt), end_ts(std::nullopt), type(type) {}
-	Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, UsrID orderId) : symbol(symbol),
+	Order::Order(String symbol, ID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, ID orderId) : symbol(symbol),
 																																	 usrId(usrId), entry_ts(ts), entry_price(unit_price), quantity(quantity), orderId(orderId), active(true), end_price(std::nullopt), end_ts(std::nullopt), type(type) {}
-	Order::Order(String symbol, UsrID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, UsrID orderId, uint64_t end_ts, double end_price) : symbol(symbol), usrId(usrId), entry_ts(ts), entry_price(unit_price), quantity(quantity), orderId(orderId), active(false), end_price(end_price), end_ts(end_ts), type(type) {}
+	Order::Order(String symbol, ID usrId, OrderType type, uint64_t ts, double unit_price, int quantity, ID orderId, uint64_t end_ts, double end_price) : symbol(symbol), usrId(usrId), entry_ts(ts), entry_price(unit_price), quantity(quantity), orderId(orderId), active(false), end_price(end_price), end_ts(end_ts), type(type) {}
 
 	bool Order::is_active()
 	{
@@ -115,7 +115,7 @@ namespace Gut
 		{
 			// 1. Collect the common values into local variables
 			uint32_t id = sqlite3_column_int(stmt.stmt, 0);
-			UsrID usr = sqlite3_column_int(stmt.stmt, 1);
+			ID usr = sqlite3_column_int(stmt.stmt, 1);
 			std::string sym = reinterpret_cast<const char *>(sqlite3_column_text(stmt.stmt, 2));
 			double price = sqlite3_column_double(stmt.stmt, 3);
 			int64_t ts = sqlite3_column_int64(stmt.stmt, 4);
@@ -142,7 +142,7 @@ namespace Gut
 		return results;
 	}
 
-	double OrdersTable::closeOrder(UsrID orderId, double end_price, uint64_t end_ts)
+	double OrdersTable::closeOrder(ID orderId, double end_price, uint64_t end_ts)
 	{
 		// We fetch entry_price, quantity, and type to calculate P/L
 		// We also fetch 'symbol' just to make the exception message more helpful
@@ -170,18 +170,8 @@ namespace Gut
 			OrderType type = orderTypeFromInt(sqlite3_column_int(stmt.stmt, 2));
 
 			// Use a switch for extensibility (e.g., adding Spread or Options later)
-			switch (type)
-			{
-			case OrderType::LONG:
-				return (end_price - entry_price) * quantity;
-
-			case OrderType::SHORT:
-				return (entry_price - end_price) * quantity;
-
-			default:
-				// This handles cases where orderTypeFromInt doesn't catch a new type
-				throw std::logic_error("Unsupported OrderType encountered during P/L calculation.");
-			}
+			// return the price of the position that was existted
+			return end_price * quantity;
 		}
 
 		// If we reach here, the order wasn't found or was already closed.

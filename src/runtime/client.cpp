@@ -61,7 +61,7 @@ void Gut::Client::startTunnel(){
 }
 
 //sets a client as authenticated
-void Gut::Client::setAuthenticated(String username, UsrID usrId){
+void Gut::Client::setAuthenticated(String username, ID usrId){
 	credentials.userId = usrId;
 	credentials.username = username;
 	User_table helper;

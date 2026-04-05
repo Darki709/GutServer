@@ -413,3 +413,26 @@ Followed by N instances of the Order Block:
 
 If and only if is active is 0 (Inactive), the following bytes are appended to that specific order block:
 [8 bytes end price (double) | 8 bytes end ts (uint64)]
+
+# End Order 
+Task type: 11
+
+Request for user to exit an existing order and take Profit/Loss
+
+[usual header set flag to encrypted]
+[1 byte task type 11 ENDORDER | 4 bytes client request id | 4 bytes order id | 8 bytes expected price as double | 1 byte password length | password]
+
+# End Order response
+
+Message type: 13 ORDEREXISTTED
+order successfully ended and profit/loss taken
+
+[usual header set flag to encrypted][1 byte message type set to 13 ORDEREXISTTED | 4 bytes client request id | 8 bytes double end_price | 8 bytes end ts]
+
+Message type: 14 ORDERFAILEDEXIT
+order failed to exit for a specfic reason
+[usual header set flag to encrypted][1 byte message type set to 14 ORDERFAILEDEXIT | 4 bytes client request id | 1 byte status]
+Statuses:
+0 ORDERNOTEXIST order id doesnt match to an existing active order for the user
+1 EXPECTEDPRICEOUTOFRANGE the actual prive slipped out of the expected price range, the order wasnt exsited to prevent unwanted behaviour
+

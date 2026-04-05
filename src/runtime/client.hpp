@@ -17,7 +17,7 @@ namespace Gut
 	};
 
 	struct AuthContext {
-    	UsrID userId;
+    	ID userId;
     	String username;
 		double balance;
 	};
@@ -70,7 +70,7 @@ namespace Gut
 		
 		void startTunnel();
 
-		void setAuthenticated(String username, UsrID usrId);
+		void setAuthenticated(String username, ID usrId);
 		const AuthContext& getCredentials();
 	};
 

@@ -152,7 +152,7 @@ namespace Gut
 
 		// if the client passed all check we procceed with the order
 		uint64_t ts = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		UsrID orderId;
+		ID orderId;
 
 		Order order{this->symbol, Task::getClient()->getCredentials().userId, this->type, ts, latest_price, this->quantity};
 

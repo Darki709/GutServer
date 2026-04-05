@@ -27,7 +27,8 @@ namespace Gut
 		TICKERINFO,
 		GETBALANCE,
 		SENDORDER,
-		FETCHORDERS
+		FETCHORDERS,
+		ENDORDER
 	};
 	
 	class Task

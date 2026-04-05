@@ -28,7 +28,7 @@ namespace Gut
 {
 
 	typedef std::string String;
-	typedef uint32_t UsrID;
+	typedef uint32_t ID;
 	typedef std::byte EncryptKey;
 	typedef std::array<uint8_t, 32> SessionKey; // AES-256
 

@@ -223,7 +223,7 @@ double Gut::User_table::getBalance(uint32_t usrId){
 }
 
 // Inside User_table.cpp
-double Gut::User_table::updateBalance(UsrID userId, double amount) {
+double Gut::User_table::updateBalance(ID userId, double amount) {
     // We fetch the new balance using RETURNING so the C++ side is synced
     // The WHERE clause ensures we don't accidentally push a balance below zero
     // (Optional: remove 'AND balance + ? >= 0' if you allow debt/margin)
