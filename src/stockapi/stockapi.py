@@ -39,14 +39,14 @@ INTERVAL_MAP = {
 #return -1 for fetch error, -2 for db insert error, else returns 0 for success
 def fetch_live_data(ticker,  interval ):
 	interval = INTERVAL_MAP[interval]
-	start_date = last_fetch_time(ticker, interval)
+	#start_date = last_fetch_time(ticker, interval)
 	ticker_obj = yf.Ticker(ticker)
 	if interval == "1m": #it means that client requested streaming data we only return latest price point
 		data = ticker_obj.history(interval=interval, period="1d")
-	elif not start_date:
-		data = ticker_obj.history(interval=interval, period="max")
 	else:
-		data = ticker_obj.history(interval=interval, start=start_date)
+		data = ticker_obj.history(interval=interval, period="max")
+	#else:
+	#	data = ticker_obj.history(interval=interval, start=start_date)
 	if data is None or data.empty:
 		return -1
 	if insert_price_data(ticker, interval, data) == -1:

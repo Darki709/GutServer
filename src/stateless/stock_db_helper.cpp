@@ -281,7 +281,7 @@ Gut::StockData Gut::Stock_helper::getLastRowFromDB(String &symbol)
 
 	// Query to get the latest record based on timestamp (date)
 	const char *sql = "SELECT date, open, high, low, close, volume FROM price_history "
-					  "WHERE ticker = ? ORDER BY date DESC LIMIT 1;";
+					  "WHERE ticker = ? AND interval = '1m' ORDER BY date DESC LIMIT 1;";
 
 	if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK)
 	{

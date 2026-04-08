@@ -36,7 +36,7 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
         StockData lastData = Stock_helper::getInstance().getLastRowFromDB(symbol);
         
         // 3. Send ONLY to this new client
-        streamingList[symbol].broadcastToSingleClient(ticket, lastData, server);
+        streamingList[symbol].broadcast(lastData, server);
         
         std::cout << "Instant price sent to new client for " << symbol << std::endl;
     } catch (...) {
@@ -222,10 +222,14 @@ void Gut::Streamer::shutDown()
 // call only under locked mutex
 void Gut::Ticker::removeClient(SOCKET socket, uint32_t reqId)
 {
-	std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
-				  { if(t.clientSocket == socket && t.reqId == reqId){
-					std::cout << "removing client " << socket << std::endl;
-					return true; } });
+    std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
+    { 
+        if (t.clientSocket == socket && t.reqId == reqId) {
+            std::cout << "Removing specific request " << reqId << " for socket " << socket << std::endl;
+            return true; // Match found: delete this one
+        } 
+        return false; // Not a match: keep this one
+    });
 }
 
 void Gut::Streamer::cancelRequest(String symbol, SOCKET socket, uint32_t reqId)
