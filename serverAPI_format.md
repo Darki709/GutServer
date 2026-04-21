@@ -319,3 +319,120 @@ CREATE TABLE IF NOT EXISTS tickers
             asset_type TEXT,      # e.g., STOCK, CRYPTO, FOREX
             sector TEXT,          # e.g., Technology, Energy
             is_active INTEGER DEFAULT 1
+
+
+# Get Ticker information
+
+Task type: 7
+
+send a symbol get: ticker name, exchange, asset type and sector (if they do not length will be 0)
+
+[usual header set flag to encrypted][1 byte Task type set to 7 TICKERINFO | 4 bytes client request id | 1 byte symbol length | symbol]
+
+
+# Get Ticker Information response
+
+Message type: 7
+
+[usual header set flag to encrypted][1 byte Message type set to 7 TICKERINFO | 4 bytes client request id | 1 byte name length | name | 1 byte exchange length | exchange | 1 byte asset type according to enum | 1 byte sector length | sector]
+
+if name length is 0 it means the symbol doesn't exist in the database
+
+
+# Get Balance request
+
+Task type: 8
+
+client uses this to get its updated balance
+
+[usual header set flag to encrypted][1 byte Task type set to 8 GETBALANCE | 4 bytes request id]
+
+
+# Get Balance response
+
+Message type: 8
+
+[usual header set flag to encrypted][1 byte Message type set to 8 GETBALANCE | 4 bytes client request id |8 bytes balance as a double]
+
+
+# Send Order
+
+Task type: 9
+
+[usual header set flag to encrypted][1 byte Task type set to 9 SENDORDER | 4 bytes request id | 1 byte order type | 1 byte symbol length | symbol | 4 bytes quantity | 8 bytes asking price as double | 1 byte password length | password ]
+
+Order types: 0 Long, 1 Short
+
+server will check the updated price of the symbol when proccessing the order, if the asking price isn't within 1% range of the updated price the server will not commit the order (prevents slippage)
+
+the client will need to send its password in order to authenticate every action
+
+# Order responses:
+
+Message type: 9 ORDERCOMMITED
+
+[usual header set flag to encrypted][1 byte Message type set to 9 ORDERCOMMITED | 4 bytes client request i | 8 bytes paid price per unit in double | 8 bytes the commit ts in seconds | 4 bytes order id]
+
+if order was commited the server will return the price payed for each unit, the srver will calculate the clients new balance and the client will do the same on its side.
+
+Message type: 10 INVALIDORDER
+
+[usual header set flag to encrypted][1 byte Message type set to 10 INVALIDORDER | 4 bytes client request i | 1 byte status]
+
+statuses:
+	INVALIDBALANCE 0, not enough money in users balance to execute the order
+	INVALIDSYMBOL 1, symbol doesnt exist in the server's database or isn't available for orders
+
+Message type: 11 ORDERSLIPPED
+
+[usual header set flag to encrypted][1 byte Message type set to 11 ORDERSLIPPED | client request id]
+
+means the asking price is not within 1% range of the market price, order isn't executed to prevent slippage
+
+
+# Fetch User Orders
+Task type: 10
+
+Requests a list of orders associated with the current user. Filters can be applied for specific symbols or views (Active/Inactive).
+
+Request Layout:
+[usual header set flag to encrypted]
+[1 byte Task type set to 10 FETCH_ORDERS | 4 bytes client request id | 1 byte symbol length (0 for all) | symbol (optional) | 1 byte view filter (0: All, 1: Active, 2: Inactive) | 4 bytes limit | 4 bytes offset]
+
+# Fetch User Orders Response
+Message type: 12
+
+Returns a serialized list of orders. If the user has no orders, the order count will be 0.
+
+Response Layout:
+[usual header set flag to encrypted]
+[1 byte Message type set to 12 FETCH_ORDERS | 4 bytes client request id | 4 bytes order count (N)]
+
+Followed by N instances of the Order Block:
+[1 byte symbol length | symbol | 4 bytes order id | 1 byte order type (0: LONG, 1: SHORT) | 8 bytes entry price (double) | 8 bytes entry ts (uint64) | 4 bytes quantity | 1 byte is active (1: active, 0: inactive)]
+
+If and only if is active is 0 (Inactive), the following bytes are appended to that specific order block:
+[8 bytes end price (double) | 8 bytes end ts (uint64)]
+
+# End Order 
+Task type: 11
+
+Request for user to exit an existing order and take Profit/Loss
+
+[usual header set flag to encrypted]
+[1 byte task type 11 ENDORDER | 4 bytes client request id | 4 bytes order id | 8 bytes expected price as double | 1 byte password length | password]
+
+# End Order response
+
+Message type: 13 ORDEREXISTTED
+order successfully ended and profit/loss taken
+
+[usual header set flag to encrypted][1 byte message type set to 13 ORDEREXISTTED | 4 bytes client request id | 8 bytes double end_price | 8 bytes end ts]
+
+Message type: 14 ORDERFAILEDEXIT
+order failed to exit for a specfic reason
+[usual header set flag to encrypted][1 byte message type set to 14 ORDERFAILEDEXIT | 4 bytes client request id | 1 byte status]
+Statuses:
+0 ORDERNOTEXIST order id doesnt match to an existing active order for the user
+1 EXPECTEDPRICEOUTOFRANGE the actual prive slipped out of the expected price range, the order wasnt exsited to prevent unwanted behaviour
+

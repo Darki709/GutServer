@@ -22,12 +22,13 @@
 #include <iomanip>
 #include <filesystem>
 #include <algorithm>
+#include <chrono>
 
 namespace Gut
 {
 
 	typedef std::string String;
-	typedef uint32_t UsrID;
+	typedef uint32_t ID;
 	typedef std::byte EncryptKey;
 	typedef std::array<uint8_t, 32> SessionKey; // AES-256
 
@@ -46,7 +47,8 @@ namespace Gut
 		out.append(reinterpret_cast<const char *>(&value), sizeof(T));
 	}
 
-	inline void append_double(String &s, double v)
+	template <typename T>
+	inline void append_8bytes_num(String &s, T v)
 	{
 		uint64_t tmp;
 		static_assert(sizeof(double) == 8);

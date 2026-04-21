@@ -6,7 +6,12 @@
 #include "registerTask.hpp"
 #include "LoginTask.hpp"
 #include "SearchTicker.hpp"
+#include "GetTickerInfo.hpp"
 #include "../runtime/client.hpp"
+#include "GetBalance.hpp"
+#include "SendOrder.hpp"
+#include "fetchorders.hpp"
+#include "endOrder.hpp"
 
 std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::shared_ptr<Client> &client)
 {
@@ -44,6 +49,16 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 			return std::make_unique<LoginTask>(client, reqId, content);
 		case static_cast<int>(TaskType::SEARCHTICKER):
 			return std::make_unique<SearchTicker>(client, reqId, content);
+		case static_cast<int>(TaskType::TICKERINFO):
+			return std::make_unique<GetTickerInfo>(client, reqId, content);
+		case static_cast<int>(TaskType::GETBALANCE):
+			return std::make_unique<GetBalance>(client, reqId);
+		case static_cast<int>(TaskType::SENDORDER):
+			return std::make_unique<SendOrder>(client, reqId, content);
+		case static_cast<int>(TaskType::FETCHORDERS):
+			return std::make_unique<FetchOrdersTask>(client, reqId, content);	
+		case static_cast<int>(TaskType::ENDORDER):
+			return std::make_unique<EndOrder>(client, reqId, content);	
 		default:
 			return nullptr;
 		}

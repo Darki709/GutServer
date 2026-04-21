@@ -70,7 +70,7 @@ void Gut::Server::serverStart()
 // main server loop
 void Gut::Server::serverRun()
 {
-	while (true)
+	while (running)
 	{
 		fd_set readfds;
 		fd_set writefds;

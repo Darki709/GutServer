@@ -4,6 +4,7 @@
 #include "../libraries.hpp"
 #include "../core/message.hpp"
 #include "../stateless/crypto.hpp"
+#include "../core/user_db_helper.hpp"
 
 
 namespace Gut
@@ -16,8 +17,9 @@ namespace Gut
 	};
 
 	struct AuthContext {
-    	UsrID userId;
+    	ID userId;
     	String username;
+		double balance;
 	};
 
 	struct CryptoContext {
@@ -68,7 +70,7 @@ namespace Gut
 		
 		void startTunnel();
 
-		void setAuthenticated(String username, UsrID usrId);
+		void setAuthenticated(String username, ID usrId);
 		const AuthContext& getCredentials();
 	};
 

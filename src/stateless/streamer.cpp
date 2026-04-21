@@ -28,6 +28,21 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
 	// check if a list for the ticker already exists and creates a new ticker if required
 	streamingList[symbol].addClient(ticket);
 	std::cout << "new client added to " << symbol << std::endl;
+
+	try {
+        // Optional: Call fetchLiveData(symbol, 1) if you want a fresh tick immediately
+        // Stock_helper::getInstance().fetchLiveData(symbol, 1);
+        
+        StockData lastData = Stock_helper::getInstance().getLastRowFromDB(symbol);
+        
+        //everytime a new client registers to stream we send him the last price data we have for that ticker so he gets an instant update without waiting for the next streaming update
+		Stock_helper::getInstance().fetchLiveData(symbol, 60);
+        streamingList[symbol].broadcast(lastData, server);
+        
+        std::cout << "Instant price sent to new client for " << symbol << std::endl;
+    } catch (...) {
+        std::cerr << "Failed to send instant update for " << symbol << std::endl;
+    }
 }
 
 void Gut::Streamer::removeClient(SOCKET socket)
@@ -56,17 +71,7 @@ void Gut::Streamer::removeClient(SOCKET socket)
 
 void Gut::Ticker::addClient(Ticket client)
 {
-	// Check if the client is already in the list to prevent duplicates
-	auto it = std::find_if(registeredClients.begin(), registeredClients.end(),
-						   [&client](const Ticket &t)
-						   {
-							   return t.clientSocket == client.clientSocket;
-						   });
-
-	if (it == registeredClients.end())
-	{
-		registeredClients.push_back(client);
-	}
+	registeredClients.push_back(client);
 	std::cout << "client " << client.clientSocket << " registered to streaming" << std::endl;
 }
 
@@ -84,18 +89,38 @@ bool Gut::Ticker::isEmpty()
 	return registeredClients.empty();
 }
 
+void Gut::Ticker::broadcastToSingleClient(Ticket ticket, StockData data, Gut::Server &server) {
+    String candle;
+    candle.reserve(48);
+    append_bytes(candle, htonll(data.ts));
+    append_8bytes_num(candle, data.open);
+    append_8bytes_num(candle, data.high);
+    append_8bytes_num(candle, data.low);
+    append_8bytes_num(candle, data.close);
+    append_bytes(candle, htonll(data.volume));
+
+    String content;
+    content.reserve(53);
+    content += static_cast<uint8_t>(MsgType::STREAM);
+    uint32_t reqId = htonl(ticket.reqId);
+    content.append(reinterpret_cast<char *>(&reqId), 4);
+    content.append(candle.data(), candle.size());
+
+    server.addMessage(Message{content, ticket.clientSocket});
+}
+
 // recieve the ts ohlc volume data [uint64_t|double|double|double|double|uint64_t]
 void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 {
-	//std::cout << "framing streaming message" << std::endl;
-	// frame candle data
+	// std::cout << "framing streaming message" << std::endl;
+	//  frame candle data
 	String candle;
 	candle.reserve(48);
 	append_bytes(candle, htonll(data.ts));
-	append_double(candle, data.open);
-	append_double(candle, data.high);
-	append_double(candle, data.low);
-	append_double(candle, data.close);
+	append_8bytes_num(candle, data.open);
+	append_8bytes_num(candle, data.high);
+	append_8bytes_num(candle, data.low);
+	append_8bytes_num(candle, data.close);
 	append_bytes(candle, htonll(data.volume));
 	// pass data to each client
 	for (auto &ticket : registeredClients)
@@ -106,10 +131,10 @@ void Gut::Ticker::broadcast(StockData data, Gut::Server &server)
 		content += static_cast<uint8_t>(MsgType::STREAM);
 		uint32_t reqId = htonl(ticket.reqId);
 		content.append(reinterpret_cast<char *>(&reqId), 4);
-		//Streamer::debugPrintContent(candle);
+		// Streamer::debugPrintContent(candle);
 		content.append(candle.data(), candle.size());
-		//Streamer::debugPrintContent(content);
-		// We pass the socket and the message to your server's outgoing queue
+		// Streamer::debugPrintContent(content);
+		//  We pass the socket and the message to your server's outgoing queue
 		server.addMessage(Message{content, ticket.clientSocket});
 	}
 }
@@ -183,7 +208,7 @@ void Gut::Streamer::run()
 
 		// Wait for the next minute (interruptible)
 		std::unique_lock<std::mutex> lock(sleepMutex);
-		m_cv.wait_for(lock, std::chrono::seconds(10), [this]
+		m_cv.wait_for(lock, std::chrono::seconds(60), [this]
 					  { return !running; });
 	}
 }
@@ -198,10 +223,14 @@ void Gut::Streamer::shutDown()
 // call only under locked mutex
 void Gut::Ticker::removeClient(SOCKET socket, uint32_t reqId)
 {
-	std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
-				  { if(t.clientSocket == socket && t.reqId == reqId){
-					std::cout << "removing client " << socket << std::endl;
-					return true; } });
+    std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
+    { 
+        if (t.clientSocket == socket && t.reqId == reqId) {
+            std::cout << "Removing specific request " << reqId << " for socket " << socket << std::endl;
+            return true; // Match found: delete this one
+        } 
+        return false; // Not a match: keep this one
+    });
 }
 
 void Gut::Streamer::cancelRequest(String symbol, SOCKET socket, uint32_t reqId)

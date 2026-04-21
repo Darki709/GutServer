@@ -1,7 +1,3 @@
-if(MSVC)
-	add_compile_options(/FS)
-endif()
-
 cmake_minimum_required(VERSION 3.10)
 project(
 	gutweb
@@ -18,6 +14,17 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_link_options(-static-libgcc -static-libstdc++ -pthread)
+endif()
+
+if(MSVC)
+    # Remove /Zi (which uses the shared PDB) and add /Z7 (which puts debug info in each .obj)
+    string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    
+    # Also add /FS just as a secondary safety measure
+    add_compile_options(/FS)
+    
+    message(STATUS "DEBUG: Switched to /Z7 format to bypass all PDB locking errors.")
 endif()
 
 # This forces the use of the static C++ runtime

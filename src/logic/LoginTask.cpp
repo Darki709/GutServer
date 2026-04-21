@@ -37,7 +37,7 @@ std::optional<Gut::Message> Gut::LoginTask::execute()
 	if ((client = Task::getClient()) == nullptr)
 		throw Errors::CLIENTNOTFOUND;
 	User_table helper;
-	UsrID usrId = helper.authenticateUser(username, password);
+	ID usrId = helper.authenticateUser(username, password);
 	String content;
 	content.push_back(static_cast<char>(MsgType::LOGIN));
 	if (usrId == -1)
