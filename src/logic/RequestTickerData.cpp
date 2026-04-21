@@ -92,18 +92,20 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		{
 			case -1:
 				{
-					std::cout << "Failed api call" << std::endl;
-					String content;
-					content.push_back(static_cast<char>(MsgType::SNAPSHOT));
-					uint32_t network_reqId = htonl(reqId);
-					content.append(reinterpret_cast<char *>(&network_reqId), 4);
-					content.push_back(1); // last message
-					uint16_t network_count = htons(0); // 0 candles
-					content.append(reinterpret_cast<char *>(&network_count), 2);
-					return std::make_optional(Message{content, socket});
+					std::cout << "Failed api call, checking db for cached data" << std::endl;
+					// String content;
+					// content.push_back(static_cast<char>(MsgType::SNAPSHOT));
+					// uint32_t network_reqId = htonl(reqId);
+					// content.append(reinterpret_cast<char *>(&network_reqId), 4);
+					// content.push_back(1); // last message
+					// uint16_t network_count = htons(0); // 0 candles
+					// content.append(reinterpret_cast<char *>(&network_count), 2);
+					// return std::make_optional(Message{content, socket});
+					break;
 				}
 			case -2:
-				throw std::runtime_error("Python error during API call");
+				std::cout << "Error during api call" << std::endl;
+				break;
 			default:
 				std::cout << "finished api call" << std::endl;
 				break;				
@@ -114,7 +116,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 		wchar_t path[MAX_PATH];
 		GetModuleFileNameW(NULL, path, MAX_PATH);
 		std::filesystem::path exePath(path);
-		std::filesystem::path exeDir = exePath.parent_path();				  // This is build/Debug/
+		std::filesystem::path exeDir = exePath.parent_path();
 		std::filesystem::path dbPath = exeDir / "database" / "stock_data.db"; // get database path
 		std::string db_path = dbPath.string();
 
@@ -181,6 +183,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 
 		try
 		{
+			int count = 0;
 			while (sqlite3_step(stmt) == SQLITE_ROW)
 			{
 				int64_t date = sqlite3_column_int64(stmt, 0);
@@ -190,6 +193,19 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 				double close = sqlite3_column_double(stmt, 4);
 				int64_t volume = sqlite3_column_int64(stmt, 5);
 				data.push_back(PriceData{static_cast<uint64_t>(date), open, close, low, high, static_cast<uint64_t>(volume)});
+				count++;
+			}
+			if(count == 0) // no data found for this ticker and interval, send empty message to client so it knows the request is processed and there is no data
+			{
+				std::cout << "no data found for this ticker and interval" << std::endl;
+				String content;
+				content.push_back(static_cast<char>(MsgType::SNAPSHOT));
+				uint32_t network_reqId = htonl(reqId);
+				content.append(reinterpret_cast<char *>(&network_reqId), 4);
+				content.push_back(1); // last message
+				uint16_t network_count = htons(0); // 0 candles
+				content.append(reinterpret_cast<char *>(&network_count), 2);
+				return std::make_optional(Message{content, socket});
 			}
 		}
 		catch (...)

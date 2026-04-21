@@ -35,7 +35,8 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
         
         StockData lastData = Stock_helper::getInstance().getLastRowFromDB(symbol);
         
-        // 3. Send ONLY to this new client
+        //everytime a new client registers to stream we send him the last price data we have for that ticker so he gets an instant update without waiting for the next streaming update
+		Stock_helper::getInstance().fetchLiveData(symbol, 60);
         streamingList[symbol].broadcast(lastData, server);
         
         std::cout << "Instant price sent to new client for " << symbol << std::endl;
