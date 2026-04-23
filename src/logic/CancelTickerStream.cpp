@@ -23,7 +23,7 @@ Gut::CancelTickerStream::CancelTickerStream(std::shared_ptr<Client> &client, uin
 	std::cout << "started cancel ticker stream for reqId " << std::to_string(ogReqId) << " on symbol " << symbol << std::endl;
 }
 
-std::optional<Gut::Message> Gut::CancelTickerStream::execute()
+std::optional<Gut::Message> Gut::CancelTickerStream::execute(ThreadResources& resources)
 {
 	std::shared_ptr<Client> client;
 	if ((client = Task::getClient()) != nullptr)

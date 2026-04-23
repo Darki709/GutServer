@@ -9,7 +9,7 @@ namespace Gut
 		std::cout << "started get ticker info for: " << symbol << std::endl;
 	}
 	
-	std::optional<Message> GetTickerInfo::execute()
+	std::optional<Message> GetTickerInfo::execute(ThreadResources& resources)
 	{
 		TickerListDBHelper helper;
 		String content;

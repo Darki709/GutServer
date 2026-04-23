@@ -18,6 +18,8 @@
 
 namespace Gut {
 
+	extern std::atomic<bool> running;
+
 	void printRawMessage(const std::string& content);
 
 	typedef std::unordered_map<SOCKET, std::shared_ptr<Client>> ClientSet;
@@ -57,7 +59,6 @@ namespace Gut {
 		//safe access to the message queue
 		std::mutex messageMutex;
 
-		std::atomic<bool> running{true};
 	public:
 
 		static Server& getInstance(); //singleton contructor
@@ -68,6 +69,8 @@ namespace Gut {
 		~Server();
 		//initialize server socket, statr listening and intialize other subsystems
 		void serverStart();
+		//cleans up the workers, python and network resources
+		void serverShutDown();
 		//mian loop
 		void serverRun();
 		//push new task to the task queue

@@ -34,16 +34,21 @@ namespace Gut
 	class Stock_helper
 	{
 	public:
-		static Stock_helper& getInstance();
+		static void init();
+		static void shutdown();
 		int fetchLiveData(String& ticker, uint32_t interval); // Returns 0 on success, -1 on Python error, -2 on other errors
 		void streamingLoop();
-		StockData getLastRowFromDB(String& symbol);
-	private:
+		std::optional<StockData> getLastRowFromDB(String& symbol);
 		Stock_helper();
 		~Stock_helper();
+	private:
+		// The "Mother" state that workers use to spawn sub-interpreters
+        static PyThreadState* s_main_tstate; 
+        
+        // This worker's specific interpreter state
+        PyThreadState* m_tstate;
+
 		PyObject* m_pModule = nullptr;
     	PyObject* m_pFunc = nullptr;
-
-		std::mutex stock_mutex;
 	};
 }

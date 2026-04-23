@@ -6,8 +6,6 @@
 #include "../libraries.hpp"
 
 namespace Gut {
-
-	std::atomic<bool> running(true);
 	void consoleThread();
 	void Shutdown();
 	int main();

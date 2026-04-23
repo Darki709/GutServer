@@ -3,7 +3,9 @@
 
 namespace fs = std::filesystem;
 
-Gut::Stock_helper::Stock_helper()
+PyThreadState *Gut::Stock_helper::s_main_tstate = nullptr; // Initialize static member
+
+void Gut::Stock_helper::init()
 {
 	// --- 1. PRE-INITIALIZATION (Environment & DLL Injection) ---
 	_putenv("OMP_NUM_THREADS=1");
@@ -63,28 +65,58 @@ Gut::Stock_helper::Stock_helper()
 	PyWideStringList_Append(&config.module_search_paths, stockapiPath.wstring().c_str());
 
 	PyStatus status = Py_InitializeFromConfig(&config);
-	PyConfig_Clear(&config);
+
+	s_main_tstate = PyEval_SaveThread(); // Save the main thread state for sub-interpreters
 	if (PyStatus_Exception(status))
-		Py_ExitStatusException(status);
+	{
+		std::cerr << "Python initialization failed: " << status.err_msg << std::endl;
+		throw std::runtime_error("Failed to initialize Python interpreter");
+	}
+}
+
+void Gut::Stock_helper::shutdown()
+{
+	PyEval_RestoreThread(s_main_tstate); // Switch to main thread state to finalize
+	Py_Finalize();
+	s_main_tstate = nullptr;
+	std::cout << "Python Environment Shutdown Successfully." << std::endl;
+}
+
+Gut::Stock_helper::Stock_helper()
+{
+
+	PyEval_RestoreThread(s_main_tstate);
+	m_tstate = PyThreadState_New(s_main_tstate->interp); 
+	PyThreadState* oldState = PyThreadState_Swap(m_tstate);
+
+	if (m_tstate == nullptr)
+	{
+		// If this fails, the main lock is still held!
+		// We must release it before crashing.
+		s_main_tstate = PyEval_SaveThread();
+		throw std::runtime_error("Python: Failed to create sub-interpreter");
+	}
+
 
 	// --- 4. PYTHON-SIDE PATH REGISTRATION ---
-	std::string forceLoadScript =
-		"import os, sys, ctypes\n"
-		"from pathlib import Path\n"
-		"exe_dir = Path(sys.executable).parent\n"
-		"\n"
-		"# 1. Force-load the Microsoft C++ Runtimes FIRST\n"
-		"runtimes = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll']\n"
-		"for dll in runtimes:\n"
-		"    try: ctypes.WinDLL(str(exe_dir / dll))\n"
-		"    except Exception as e: print(f'Failed to load runtime {dll}: {e}')\n"
-		"\n"
-		"# 2. Now load the Curl dependencies\n"
-		"curl_dlls = ['zlib.dll', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll', 'libcurl.dll']\n"
-		"for dll in curl_dlls:\n"
-		"    try: ctypes.WinDLL(str(exe_dir / dll))\n"
-		"    except Exception as e: print(f'Failed to load curl component {dll}: {e}')\n";
+	std::string forceLoadScript = R"(
+import os, sys, ctypes
+from pathlib import Path
 
+exe_dir = Path(sys.executable).parent
+
+# 1. Force-load the Microsoft C++ Runtimes FIRST
+runtimes = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll']
+for dll in runtimes:
+	try: ctypes.WinDLL(str(exe_dir / dll))
+	except Exception as e: print(f'Failed to load runtime {dll}: {e}')
+
+# 2. Now load the Curl dependencies
+curl_dlls = ['zlib.dll', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll', 'libcurl.dll']
+for dll in curl_dlls:
+	try: ctypes.WinDLL(str(exe_dir / dll))
+	except Exception as e: print(f'Failed to load curl component {dll}: {e}')
+	)";
 	PyRun_SimpleString(forceLoadScript.c_str());
 
 	std::string portableFix = R"(
@@ -98,57 +130,55 @@ curl_dir = runtime_lib / 'curl_cffi'
 
 # 2. Add DLL search paths dynamically
 if curl_dir.exists():
-    os.add_dll_directory(str(curl_dir))
-    print(f"Portable: Registered {curl_dir}")
+	os.add_dll_directory(str(curl_dir))
+	print(f"Portable: Registered {curl_dir}")
 
 # 3. Locate the wrapper (using a wildcard to find the .pyd even if the suffix changes)
 try:
-    pyd_files = list(curl_dir.glob('_wrapper*.pyd'))
-    if pyd_files:
-        pyd_path = pyd_files[0]
-        # Use the same 'ALTERED_SEARCH_PATH' logic but with the dynamic path
-        handle = ctypes.windll.kernel32.LoadLibraryExW(str(pyd_path), None, 0x00000008)
-        if handle:
-            print(f"SUCCESS: Portable load of {pyd_path.name} at {handle}")
-        else:
-            err = ctypes.windll.kernel32.GetLastError()
-            print(f"KERNEL ERROR: {err} at path {pyd_path}")
-    else:
-        print("ERROR: Could not find _wrapper.pyd in curl_cffi folder.")
+	pyd_files = list(curl_dir.glob('_wrapper*.pyd'))
+	if pyd_files:
+		pyd_path = pyd_files[0]
+		# Use the same 'ALTERED_SEARCH_PATH' logic but with the dynamic path
+		handle = ctypes.windll.kernel32.LoadLibraryExW(str(pyd_path), None, 0x00000008)
+		if handle:
+			print(f"SUCCESS: Portable load of {pyd_path.name} at {handle}")
+		else:
+			err = ctypes.windll.kernel32.GetLastError()
+			print(f"KERNEL ERROR: {err} at path {pyd_path}")
+	else:
+		print("ERROR: Could not find _wrapper.pyd in curl_cffi folder.")
 except Exception as e:
-    print(f"PORTABLE LOAD ERROR: {e}")
-)";
+	print(f"PORTABLE LOAD ERROR: {e}")
+	)";
 
 	PyRun_SimpleString(portableFix.c_str());
 
-	std::string linkTest =
-		"import os, sys, ctypes\n"
-		"from pathlib import Path\n"
-		"exe_dir = Path(sys.executable).parent\n"
-		"curl_dir = exe_dir / 'python_runtime' / 'Lib' / 'site-packages' / 'curl_cffi'\n"
-		"\n"
-		"os.add_dll_directory(str(curl_dir))\n"
-		"pyd_path = curl_dir / '_wrapper.cp313-win_amd64.pyd'\n"
-		"\n"
-		"try:\n"
-		"    # Attempting to load the binary extension directly\n"
-		"    ctypes.PyDLL(str(pyd_path))\n"
-		"    print('SUCCESS: _wrapper.pyd binary is loadable.')\n"
-		"except Exception as e:\n"
-		"    print(f'LINK FAILURE: {e}')\n"
-		"    # Check if a specific dependency is missing\n"
-		"    for dll in ['libcurl.dll', 'libcrypto-3.dll', 'libssl-3.dll']:\n"
-		"        if not (curl_dir / dll).exists():\n"
-		"            print(f'MISSING FROM FOLDER: {dll}')\n";
+	std::string linkTest = R"(
+import os, sys, ctypes
+from pathlib import Path
+exe_dir = Path(sys.executable).parent
+curl_dir = exe_dir / 'python_runtime' / 'Lib' / 'site-packages' / 'curl_cffi'
 
+os.add_dll_directory(str(curl_dir))
+pyd_path = curl_dir / '_wrapper.cp313-win_amd64.pyd'
+
+try:
+	# Attempting to load the binary extension directly
+	ctypes.PyDLL(str(pyd_path))
+	print('SUCCESS: _wrapper.pyd binary is loadable.')
+except Exception as e:
+	print(f'LINK FAILURE: {e}')
+	# Check if a specific dependency is missing
+	for dll in ['libcurl.dll', 'libcrypto-3.dll', 'libssl-3.dll']:
+		if not (curl_dir / dll).exists():
+			print(f'MISSING FROM FOLDER: {dll}')
+	)";
 	PyRun_SimpleString(linkTest.c_str());
 
 	// --- 5. THE ACTUAL IMPORT ---
-	PyGILState_STATE gstate = PyGILState_Ensure();
 	std::cout << "Final attempt to import stockapi..." << std::endl;
 	std::string cmd = "import traceback\ntry:\n    import stockapi.stockapi\n    print('--- SYSTEM ONLINE ---')\nexcept Exception:\n    traceback.print_exc()";
 	PyRun_SimpleString(cmd.c_str());
-	PyGILState_Release(gstate);
 
 	// Get the module handle from sys.modules
 	m_pModule = PyImport_ImportModule("stockapi.stockapi");
@@ -156,7 +186,6 @@ except Exception as e:
 	if (!m_pModule)
 	{
 		PyErr_Print();
-		PyGILState_Release(gstate);
 		throw std::runtime_error("Failed to import stockapi.");
 	}
 
@@ -166,38 +195,47 @@ except Exception as e:
 	{
 		Py_XDECREF(m_pFunc);
 		Py_DECREF(m_pModule);
-		PyGILState_Release(gstate);
 		throw std::runtime_error("fetch_live_data missing or not callable.");
 	}
 
-	PyGILState_Release(gstate);
-	std::cout << "Python Environment Initialized Successfully." << std::endl;
-
-	std::cout << "Initializing SQLite Database Connection..." << std::endl;
+	PyThreadState_Swap(oldState);
+	s_main_tstate = PyEval_SaveThread(); // release worker
+	std::cout << "Python Environment Initialized Successfully for worker." << std::endl;
 }
 
 Gut::Stock_helper::~Stock_helper()
 {
-	PyGILState_STATE gstate = PyGILState_Ensure(); // Acquire GIL
-	Py_XDECREF(m_pFunc);
-	Py_XDECREF(m_pModule);
-	PyGILState_Release(gstate); // Release before Finalize	
-	Py_Finalize();
-}
 
+	if (s_main_tstate)
+	{
+		// Restore the state to clean it up
+		PyEval_RestoreThread(m_tstate);
+
+		Py_XDECREF(m_pFunc);
+		Py_XDECREF(m_pModule);
+
+		// Delete the thread state
+		PyThreadState_Clear(m_tstate);
+		PyThreadState_Delete(m_tstate);
+		
+		m_tstate = nullptr;
+	}
+}
 
 int Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 {
-	std::lock_guard<std::mutex> lock(stock_mutex); // only one data fetch at a time
 	std::cout << "C++: Entering fetchLiveData" << std::endl;
 	// aquire GIL safely with RAII
-	struct GILRelease
+	class PythonContextGuard
 	{
-		PyGILState_STATE state;
-		GILRelease() { state = PyGILState_Ensure(); }
-		~GILRelease() { PyGILState_Release(state); }
-	} gil;
-	std::cout << "C++: GIL Acquired" << std::endl;
+		PyThreadState *state;
+
+	public:
+		PythonContextGuard(PyThreadState *s) : state(s) { PyEval_RestoreThread(state); }
+		~PythonContextGuard() { state = PyEval_SaveThread(); }
+	} guard(this->m_tstate);
+
+	std::cout << "Sub-interpreter context acquired." << std::endl;
 	if (m_pFunc == nullptr)
 	{
 		fprintf(stderr, "CRASH PREVENTION: m_pFunc is NULL!\n");
@@ -223,19 +261,13 @@ int Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 		}
 	}
 	catch (...)
-	{
-		PyErr_Print();
-	}
+	{}
+	PyErr_Print();
+	std::cout << "Exception occurred while calling Python function." << std::endl;
 	return -1; // Indicate failure to fetch data
 }
 
-Gut::Stock_helper &Gut::Stock_helper::getInstance()
-{
-	static Stock_helper instance;
-	return instance;
-}
-
-Gut::StockData Gut::Stock_helper::getLastRowFromDB(String &symbol)
+std::optional<Gut::StockData> Gut::Stock_helper::getLastRowFromDB(String &symbol)
 {
 	std::cout << "fetching streaming data for " << symbol << std::endl;
 	StockData data = {0}; // Initialize with zeros
@@ -297,11 +329,16 @@ Gut::StockData Gut::Stock_helper::getLastRowFromDB(String &symbol)
 			data.close = sqlite3_column_double(stmt, 4);
 			data.volume = static_cast<uint64_t>(sqlite3_column_int64(stmt, 5));
 		}
+		else
+		{
+			std::cout << "No data found for symbol: " << symbol << std::endl;
+			return std::nullopt; // No data found for this symbol
+		}
 		sqlite3_finalize(stmt);
 	}
 	else
 	{
 		throw std::runtime_error("Failed to prepare SQLite statement" + std::string(sqlite3_errmsg(db)));
 	}
-	return data;
+	return std::make_optional(data); // Return the fetched data wrapped in an optional
 }

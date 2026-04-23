@@ -13,6 +13,6 @@ namespace Gut
 
 	public:
 		SearchTicker(std::shared_ptr<Client>& client, uint32_t reqId, std::string content);
-		std::optional<Message> execute() override;
+		std::optional<Message> execute(ThreadResources& resources) override;
 	};
 }

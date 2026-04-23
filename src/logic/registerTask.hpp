@@ -14,7 +14,7 @@ namespace Gut{
 		public:
 			RegisterTask(std::shared_ptr<Client>& client, uint32_t reqId, String content);
 			~RegisterTask() = default;
-			std::optional<Message> execute();
+			std::optional<Message> execute(ThreadResources& resources);
 		private:
 			String username;
 			String password;

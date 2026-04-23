@@ -30,6 +30,8 @@ namespace Gut
 		FETCHORDERS,
 		ENDORDER
 	};
+
+	class ThreadResources; //forawrd decleration
 	
 	class Task
 	{
@@ -46,7 +48,7 @@ namespace Gut
 		Server* getServer();
 		void setServer(Server* server);
 		//instructions for the task
-		virtual std::optional<Message> execute() = 0;
+		virtual std::optional<Message> execute(ThreadResources& resources) = 0;
 	};
 }
 

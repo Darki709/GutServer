@@ -11,6 +11,6 @@ namespace Gut{
 		public:
 			GetTickerInfo(std::shared_ptr<Client>& client, uint32_t reqId, String symbol);
 			~GetTickerInfo() = default;
-			std::optional<Message> execute();
+			std::optional<Message> execute(ThreadResources& resources);
 	};
 }

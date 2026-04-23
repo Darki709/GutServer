@@ -4,7 +4,7 @@ namespace Gut{
 	GetBalance::GetBalance(std::shared_ptr<Client>& client, uint32_t reqId) : Task(client, reqId) {
 		std::cout << Task::getClient()->getCredentials().username << " is checking his balance" << std::endl;
 	}
-	std::optional<Message> GetBalance::execute(){
+	std::optional<Message> GetBalance::execute(ThreadResources& resources){
 		User_table helper;
 		double balance = helper.getBalance(Task::getClient()->getCredentials().userId);
 		String content;

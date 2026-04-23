@@ -37,7 +37,7 @@ namespace Gut
 
 	public:
 		RequestTickerData(std::shared_ptr<Client> &client, uint32_t reqId, String content);
-		std::optional<Message> execute() override;
+		std::optional<Message> execute(ThreadResources& resources) override;
 	};
 
 	//class for the rows fetched from database

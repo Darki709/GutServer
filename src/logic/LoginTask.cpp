@@ -31,7 +31,7 @@ Gut::LoginTask::LoginTask(std::shared_ptr<Client> &client, uint32_t reqId, Strin
 	std::cout << "Loging user " << username << " in" << std::endl;
 }
 
-std::optional<Gut::Message> Gut::LoginTask::execute()
+std::optional<Gut::Message> Gut::LoginTask::execute(ThreadResources& resources)
 {
 	std::shared_ptr<Client> client;
 	if ((client = Task::getClient()) == nullptr)

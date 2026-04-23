@@ -9,6 +9,9 @@ int main()
 	// start console command listener
 	std::thread input(Gut::consoleThread);
 	serverInstance.serverRun();
+	if(input.joinable())
+		input.join();
+	serverInstance.serverShutDown();	
 	return 0;
 }
 
@@ -25,7 +28,6 @@ void Gut::consoleThread() {
 
 void Gut::Shutdown() {
     std::cout << "Shutting down server..." << std::endl;
-    WSACleanup();
-    Gut::running = false;
-	exit(0);
+    Gut::running.store(false);
+	WSACleanup();
 }

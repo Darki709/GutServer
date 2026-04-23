@@ -10,7 +10,7 @@ Gut::HandShakeHello::HandShakeHello(std::shared_ptr<Client> &client, uint32_t re
 	std::cout << "handshakehello started" << std::endl;
 }
 
-std::optional<Gut::Message> Gut::HandShakeHello::execute()
+std::optional<Gut::Message> Gut::HandShakeHello::execute(ThreadResources& resources)
 {
 	// check client is still valid
 	std::shared_ptr<Client> client;

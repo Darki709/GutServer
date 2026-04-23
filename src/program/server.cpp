@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <cstring>
 
+std::atomic<bool> Gut::running{true};
+
 Gut::Server& Gut::Server::getInstance()
 {
 	static Server instance;
@@ -22,28 +24,14 @@ Gut::Server::Server()
 
 Gut::Server::~Server()
 {
-	// signal workers to stop
-	running = false;
-
-	// wake all workers blocked on taskCV
-	taskCV.notify_all();
-
-	// destroy workers (they must join internally)
-	for (int i = 0; i < WORKERCOUNT; i++)
-	{
-		delete workers[i];
-		workers[i] = nullptr;
-	}
-
-	// close the streamer thread
-	Streamer::getInstance().shutDown();
-
-	// close server socket last
-	delete serverSocket;
+	std::cout << "Server destroyed" << std::endl;
 }
 
 void Gut::Server::serverStart()
 {
+	//initialize the python environment
+	Gut::Stock_helper::init();
+	std::cout << "Python stock helper started" << std::endl;
 	Streamer::getInstance();
 	std::cout <<"streamer started" << std::endl;
 	try
@@ -60,9 +48,6 @@ void Gut::Server::serverStart()
 		std::cout << "Failed to create and bind server socket (TCP)" << std::endl;
 		throw;
 	}
-	//wkae up python stock data fetcher
-	Gut::Stock_helper::getInstance();
-	std::cout << "Python stock helper started" << std::endl;
 	std::cout << "Server started and listening on port " << DEFAULT_PORT << std::endl;
 }
 
@@ -70,7 +55,8 @@ void Gut::Server::serverStart()
 // main server loop
 void Gut::Server::serverRun()
 {
-	while (running)
+
+	while (running.load())
 	{
 		fd_set readfds;
 		fd_set writefds;
@@ -97,6 +83,9 @@ void Gut::Server::serverRun()
 		int activity = select(0, &readfds, &writefds, nullptr, &tv);
 		if (activity == SOCKET_ERROR)
 		{
+			// If we are shutting down, a socket error is expected
+    		if (!running.load()) break;
+
 			std::cout << "select() failed: " << WSAGetLastError() << std::endl;
 			continue;
 		}
@@ -342,9 +331,9 @@ std::unique_ptr<Gut::Task> Gut::Server::popTask()
 	std::unique_lock<std::mutex> lock(taskMutex);
 
 	taskCV.wait(lock, [this]()
-				{ return !running || !taskQueue.empty(); });
+				{ return !running.load() || !taskQueue.empty(); });
 
-	if (!running)
+	if (!running.load())
 		return nullptr;
 
 	auto task = std::move(taskQueue.front());
@@ -371,4 +360,29 @@ void Gut::printRawMessage(const std::string& content) {
                   << static_cast<int>(c) << " ";
     }
     std::cout << std::dec << std::endl; // back to decimal
+}
+
+void Gut::Server::serverShutDown()
+{
+	// signal workers to stop
+	running.store(false);
+
+	// wake all workers blocked on taskCV
+	taskCV.notify_all();
+
+	//close python environment
+	Stock_helper::shutdown();
+
+	// destroy workers (they must join internally)
+	for (int i = 0; i < WORKERCOUNT; i++)
+	{
+		delete workers[i];
+		workers[i] = nullptr;
+	}
+
+	// close the streamer thread
+	Streamer::getInstance().shutDown();
+
+	// close server socket last
+	if(serverSocket) delete serverSocket;
 }

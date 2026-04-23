@@ -10,7 +10,7 @@ namespace Gut
 	{
 	public:		
 		FetchOrdersTask(std::shared_ptr<Gut::Client> &client, uint32_t reqId, String content);	
-		std::optional<Message> execute() override;
+		std::optional<Message> execute(ThreadResources& resources) override;
 
 	private:
 		OrderFilters m_filters;

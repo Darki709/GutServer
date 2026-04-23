@@ -51,6 +51,7 @@ namespace Gut
 		std::unordered_map<String,Ticker> streamingList;
 		std::mutex streamingListMutex;
 		std::thread thread;
+		Stock_helper* stockHelper;
 		Server& server;
 		std::atomic<bool> running{true};
 		std::mutex sleepMutex;               // Mutex for the condition variable

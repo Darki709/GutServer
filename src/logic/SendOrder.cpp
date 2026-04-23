@@ -1,4 +1,5 @@
 #include "SendOrder.hpp"
+#include "../runtime/worker.hpp"
 
 namespace Gut
 {
@@ -51,7 +52,7 @@ namespace Gut
 		offset += passLen;
 	}
 
-	std::optional<Message> SendOrder::execute()
+	std::optional<Message> SendOrder::execute(ThreadResources& resources)
 	{
 		auto client = Task::getClient();
 		if (!client)
@@ -102,15 +103,15 @@ namespace Gut
 		StockData latest_data;
 		// the request is valid and now the task fetches the latest price
 		{
-			Stock_helper &stock_helper = Stock_helper::getInstance();
-			if (stock_helper.fetchLiveData(this->symbol, static_cast<uint32_t>(Interval::MIN_1)) != 0)
+			Stock_helper *stock_helper = resources.getStockHelper();
+			if (stock_helper->fetchLiveData(this->symbol, static_cast<uint32_t>(Interval::MIN_1)) != 0)
 			{
 				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
 				content.append(n_reqId, 4);
 				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDSYMBOL));
 				return Message{content, Task::getClient()->getSocket()};
 			}
-			latest_data = stock_helper.getLastRowFromDB(this->symbol);
+			latest_data = stock_helper->getLastRowFromDB(this->symbol).value(); //this might break if no data is in the db, shouldn't happen though if the api call doesnt return error
 		}
 
 		// check for price slip

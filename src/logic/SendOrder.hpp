@@ -23,7 +23,7 @@ namespace Gut{
 			String password;
 		public:
 			SendOrder(std::shared_ptr<Client> &client, uint32_t reqId, String content);
-			std::optional<Message> execute();
+			std::optional<Message> execute(ThreadResources& resources);
 	};
 
 

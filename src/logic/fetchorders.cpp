@@ -41,7 +41,7 @@ namespace Gut
 		std::cout << "[DEBUG] FetchOrders ID:" << getReqId() << " User:" << m_filters.userId << " Sym:" << (m_filters.symbol ? *m_filters.symbol : "ALL") << " View:" << static_cast<int>(m_filters.view.value()) << " Lim:" << m_filters.limit << " Off:" << m_filters.offset << std::endl;
 	}
 
-	std::optional<Message> FetchOrdersTask::execute()
+	std::optional<Message> FetchOrdersTask::execute(ThreadResources& resources)
 	{
 
 		// 1. Fetch the data from SQLite

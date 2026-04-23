@@ -22,6 +22,6 @@ namespace Gut
 				
 	public:
 		EndOrder(std::shared_ptr<Client>& client, uint32_t reqId, String content);
-		std::optional<Message> execute() override;
+		std::optional<Message> execute(ThreadResources& resources) override;
 	};
 }

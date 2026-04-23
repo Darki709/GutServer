@@ -37,7 +37,7 @@ namespace Gut
 			std::cout << "SearchTicker task created with query: " << query << " pageSize: " << static_cast<int>(pageSize) << " lastTickerId: " << lastTickerId << std::endl;
 		}
 
-	std::optional<Message> SearchTicker::execute() {
+	std::optional<Message> SearchTicker::execute(ThreadResources& resources) {
 		if(Task::getClient() == nullptr) {
 			throw std::runtime_error("Client not found for SearchTicker task");
 		}

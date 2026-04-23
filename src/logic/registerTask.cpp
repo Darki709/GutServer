@@ -24,7 +24,7 @@ Gut::RegisterTask::RegisterTask(std::shared_ptr<Client>& client, uint32_t reqId,
     std::cout << "Registering user " << username << " with password length " << (int)passLen << std::endl;
 }
 
-std::optional<Gut::Message> Gut::RegisterTask::execute(){
+std::optional<Gut::Message> Gut::RegisterTask::execute(ThreadResources& resources){
 	std::shared_ptr<Client> client;
 	if((client = Task::getClient()) == nullptr){
 		throw CLIENTNOTFOUND;

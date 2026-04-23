@@ -10,6 +10,6 @@ namespace Gut{
 			String encryptedMessage;
 		public:
 			HandShakeVerify(std::shared_ptr<Client>& client, uint32_t reqId , String encryptedMessage);
-			std::optional<Message> execute() override;
+			std::optional<Message> execute(ThreadResources& resources) override;
 	};
 }

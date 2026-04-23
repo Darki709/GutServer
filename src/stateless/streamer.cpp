@@ -2,10 +2,11 @@
 #include "../program/server.hpp" //allows streamer to add messages to the queue
 #include <algorithm>
 
-Gut::Streamer::Streamer() : server(Server::getInstance())
+Gut::Streamer::Streamer() : server(Server::getInstance()), stockHelper(nullptr)
 {
 	// start the streamer when some creates it for the first time
 	thread = std::thread(&Streamer::run, this);
+	stockHelper = new Stock_helper();
 	std::cout << "streamer started" << std::endl;
 }
 
@@ -19,6 +20,7 @@ Gut::Streamer::~Streamer()
 {
 	if (thread.joinable())
 		thread.join();
+	delete stockHelper;
 }
 
 void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
@@ -29,20 +31,22 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
 	streamingList[symbol].addClient(ticket);
 	std::cout << "new client added to " << symbol << std::endl;
 
-	try {
-        // Optional: Call fetchLiveData(symbol, 1) if you want a fresh tick immediately
-        // Stock_helper::getInstance().fetchLiveData(symbol, 1);
-        
-        StockData lastData = Stock_helper::getInstance().getLastRowFromDB(symbol);
-        
-        //everytime a new client registers to stream we send him the last price data we have for that ticker so he gets an instant update without waiting for the next streaming update
-		Stock_helper::getInstance().fetchLiveData(symbol, 60);
-        streamingList[symbol].broadcast(lastData, server);
-        
-        std::cout << "Instant price sent to new client for " << symbol << std::endl;
-    } catch (...) {
-        std::cerr << "Failed to send instant update for " << symbol << std::endl;
-    }
+	try
+	{
+		// everytime a new client registers to stream we send him the last price data we have for that ticker so he gets an instant update without waiting for the next streaming update
+
+		std::optional<StockData> lastData = stockHelper->getLastRowFromDB(symbol);
+		if (lastData.has_value())
+		{
+			streamingList[symbol].broadcast(lastData.value(), server);
+		}
+
+		std::cout << "Instant price sent to new client for " << symbol << std::endl;
+	}
+	catch (...)
+	{
+		std::cerr << "Failed to send instant update for " << symbol << std::endl;
+	}
 }
 
 void Gut::Streamer::removeClient(SOCKET socket)
@@ -89,24 +93,25 @@ bool Gut::Ticker::isEmpty()
 	return registeredClients.empty();
 }
 
-void Gut::Ticker::broadcastToSingleClient(Ticket ticket, StockData data, Gut::Server &server) {
-    String candle;
-    candle.reserve(48);
-    append_bytes(candle, htonll(data.ts));
-    append_8bytes_num(candle, data.open);
-    append_8bytes_num(candle, data.high);
-    append_8bytes_num(candle, data.low);
-    append_8bytes_num(candle, data.close);
-    append_bytes(candle, htonll(data.volume));
+void Gut::Ticker::broadcastToSingleClient(Ticket ticket, StockData data, Gut::Server &server)
+{
+	String candle;
+	candle.reserve(48);
+	append_bytes(candle, htonll(data.ts));
+	append_8bytes_num(candle, data.open);
+	append_8bytes_num(candle, data.high);
+	append_8bytes_num(candle, data.low);
+	append_8bytes_num(candle, data.close);
+	append_bytes(candle, htonll(data.volume));
 
-    String content;
-    content.reserve(53);
-    content += static_cast<uint8_t>(MsgType::STREAM);
-    uint32_t reqId = htonl(ticket.reqId);
-    content.append(reinterpret_cast<char *>(&reqId), 4);
-    content.append(candle.data(), candle.size());
+	String content;
+	content.reserve(53);
+	content += static_cast<uint8_t>(MsgType::STREAM);
+	uint32_t reqId = htonl(ticket.reqId);
+	content.append(reinterpret_cast<char *>(&reqId), 4);
+	content.append(candle.data(), candle.size());
 
-    server.addMessage(Message{content, ticket.clientSocket});
+	server.addMessage(Message{content, ticket.clientSocket});
 }
 
 // recieve the ts ohlc volume data [uint64_t|double|double|double|double|uint64_t]
@@ -182,22 +187,28 @@ void Gut::Streamer::run()
 			try
 			{
 				// Update DB via Python (Stock_helper)
-				Stock_helper::getInstance().fetchLiveData(symbol, 60);
+				int state = stockHelper->fetchLiveData(symbol, 60);
+				if (state != 0)
+				{
+					std::cerr << "Failed to fetch live data for " << symbol << " with error code: " << state << std::endl;
+					continue; // Skip broadcasting if we can't fetch the latest data
+				}
 
 				// Fetch the row we just saved from SQLite
 				// Assuming this returns a struct with date, open, high, low, close, volume
-				StockData data = Stock_helper::getInstance().getLastRowFromDB(symbol);
+				std::optional<StockData> maybeData = stockHelper->getLastRowFromDB(symbol);
 
 				// Market Status Check
 				// Only broadcast if the timestamp is within the last 5 minutes
-				std::cout << data.ts << data.open << data.high << data.low << data.close << data.volume << std::endl;
-
-				std::lock_guard<std::mutex> lock(streamingListMutex);
-				if (streamingList.contains(symbol))
+				if (maybeData.has_value())
 				{
-					std::cout << "data is valid to broadcast" << std::endl;
-					// This calls the binary formatting logic we built
-					streamingList[symbol].broadcast(data, server);
+					std::lock_guard<std::mutex> lock(streamingListMutex);
+					if (streamingList.contains(symbol))
+					{
+						std::cout << "data is valid to broadcast" << std::endl;
+						// This calls the binary formatting logic we built
+						streamingList[symbol].broadcast(maybeData.value(), server);
+					}
 				}
 			}
 			catch (std::exception e)
@@ -223,14 +234,15 @@ void Gut::Streamer::shutDown()
 // call only under locked mutex
 void Gut::Ticker::removeClient(SOCKET socket, uint32_t reqId)
 {
-    std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
-    { 
-        if (t.clientSocket == socket && t.reqId == reqId) {
-            std::cout << "Removing specific request " << reqId << " for socket " << socket << std::endl;
-            return true; // Match found: delete this one
-        } 
-        return false; // Not a match: keep this one
-    });
+	std::erase_if(registeredClients, [socket, reqId](const Ticket &t)
+				  {
+					  if (t.clientSocket == socket && t.reqId == reqId)
+					  {
+						  std::cout << "Removing specific request " << reqId << " for socket " << socket << std::endl;
+						  return true; // Match found: delete this one
+					  }
+					  return false; // Not a match: keep this one
+				  });
 }
 
 void Gut::Streamer::cancelRequest(String symbol, SOCKET socket, uint32_t reqId)

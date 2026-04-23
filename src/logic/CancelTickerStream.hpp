@@ -9,7 +9,7 @@ namespace Gut{
 		public:
 			CancelTickerStream(std::shared_ptr<Client>& client, uint32_t reqId, String content);
 			~CancelTickerStream() = default;
-			std::optional<Message> execute();
+			std::optional<Message> execute(ThreadResources& resources);
 
 		private:
 			String symbol;

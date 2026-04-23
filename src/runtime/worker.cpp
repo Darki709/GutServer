@@ -6,16 +6,18 @@ namespace Gut
 {
 
 	Worker::Worker(Server *srv)
-		: server(srv) {}
+		: server(srv), stockHelper(nullptr) {}
 
 	Worker::~Worker()
 	{
+		delete stockHelper;
 		if (thread.joinable())
 			thread.join();
 	}
 
 	void Worker::start()
 	{
+		stockHelper = new Stock_helper();
 		thread = std::thread(&Worker::run, this);
 	}
 
@@ -34,7 +36,7 @@ namespace Gut
 				std::cout << "new task is being proccessed" << std::endl;
 				//allows tasks to push more then one message
 				task->setServer(server);
-				std::optional<Message> result = task->execute();
+				std::optional<Message> result = task->execute(*this);
 				if(result)
 					server->addMessage(std::move(result.value()));
 			}
@@ -50,6 +52,11 @@ namespace Gut
 				std::cout << "Worker: task execution failed due to unknown bug" << std::endl;
 			}
 		}
+	}
+
+	Stock_helper* Worker::getStockHelper()
+	{
+		return stockHelper;
 	}
 
 }

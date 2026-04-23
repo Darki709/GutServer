@@ -60,7 +60,7 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 	std::cout << "RequestTickerData started: " << symbol << " interval: " << interval << " start_ts: " << this->start_ts << " end_ts: " << this->end_ts << " stream: " << stream << " snapshot: " << snapshot << std::endl;
 }
 
-std::optional<Gut::Message> Gut::RequestTickerData::execute()
+std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& resources)
 {
 	// check if client still lives
 	std::shared_ptr<Client> client = Task::getClient();
@@ -74,6 +74,38 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 	uint32_t reqId = Task::getReqId();
 	std::cout << "proccessing " << std::to_string(reqId) << std::endl;
 
+	if(!snapshot && !stream)
+	{ 
+		std::cout << "neither snapshot nor stream flag is set, invalid request" << std::endl;
+		throw Errors::INVALIDREQUEST;
+	}
+
+	// load price data from api, if nothing was thrown in means the fetch is ok,
+	// errors at execution are handled by the worker		
+	int status = resources.getStockHelper()->fetchLiveData(symbol, static_cast<int>(interval));
+	switch (status)
+	{
+		case -1:
+			{
+				std::cout << "Failed api call, checking db for cached data" << std::endl;
+				// String content;
+				// content.push_back(static_cast<char>(MsgType::SNAPSHOT));
+				// uint32_t network_reqId = htonl(reqId);
+				// content.append(reinterpret_cast<char *>(&network_reqId), 4);
+				// content.push_back(1); // last message
+				// uint16_t network_count = htons(0); // 0 candles
+				// content.append(reinterpret_cast<char *>(&network_count), 2);
+				// return std::make_optional(Message{content, socket});
+				break;
+			}
+		case -2:
+			std::cout << "Error during api call" << std::endl;
+			break;
+		default:
+			std::cout << "finished api call" << std::endl;
+			break;				
+	}
+
 	// check if user wants to sign up for streaming
 	if (stream)
 	{
@@ -84,32 +116,6 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute()
 	// check if user asked for snapshot of historical data
 	if (snapshot)
 	{
-		// load price data from api, if nothing was thrown in means the fetch is ok,
-		// errors at execution are handled by the worker
-		
-		int status = Stock_helper::getInstance().fetchLiveData(symbol, static_cast<int>(interval));
-		switch (status)
-		{
-			case -1:
-				{
-					std::cout << "Failed api call, checking db for cached data" << std::endl;
-					// String content;
-					// content.push_back(static_cast<char>(MsgType::SNAPSHOT));
-					// uint32_t network_reqId = htonl(reqId);
-					// content.append(reinterpret_cast<char *>(&network_reqId), 4);
-					// content.push_back(1); // last message
-					// uint16_t network_count = htons(0); // 0 candles
-					// content.append(reinterpret_cast<char *>(&network_count), 2);
-					// return std::make_optional(Message{content, socket});
-					break;
-				}
-			case -2:
-				std::cout << "Error during api call" << std::endl;
-				break;
-			default:
-				std::cout << "finished api call" << std::endl;
-				break;				
-		}	
 
 		// read data from database		
 		// get db path

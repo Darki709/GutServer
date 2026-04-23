@@ -10,7 +10,7 @@ Gut::HandShakeVerify::HandShakeVerify (std::shared_ptr<Client>& client, uint32_t
 		std::cout << "handshakeverify started" << std::endl;
 	}
 
-std::optional<Gut::Message> Gut::HandShakeVerify::execute(){
+std::optional<Gut::Message> Gut::HandShakeVerify::execute(ThreadResources& resources){
 	std::shared_ptr<Client> client;
 	if((client = Task::getClient()) == nullptr){
 		throw CLIENTNOTFOUND;

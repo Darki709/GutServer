@@ -198,7 +198,7 @@ def main():
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
     # Use unique username for testing
-    test_user = "oer"
+    test_user = "oefsr"
     test_pass = "Secureass123!"
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -223,8 +223,8 @@ def main():
             return
 
         # 3. Register
-        send_register_request(sock, aes_key, test_user, test_pass)
-        #send_login_request(sock, aes_key, test_user, test_pass)
+        #send_register_request(sock, aes_key, test_user, test_pass)
+        send_login_request(sock, aes_key, test_user, test_pass)
 
         while True:
             header = sock.recv(4)
