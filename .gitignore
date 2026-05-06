@@ -12,3 +12,4 @@ build/
 *.exe
 external/
 CMakeFiles/
+vcpkg/

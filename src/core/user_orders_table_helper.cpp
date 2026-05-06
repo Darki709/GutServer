@@ -41,7 +41,7 @@ namespace Gut
 	uint32_t OrdersTable::setOrder(Order &order)
 	{
 		const char *query = "INSERT INTO orders (user_id, symbol, entry_price, entry_ts, quantity, type) VALUES (?, ?, ?, ?, ?, ?) RETURNING order_id;";
-		Gut::SecureStmt stmt{nullptr};
+		Gut::SecureStmt stmt{db, query};
 		if (sqlite3_prepare(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK)
 		{
 			throw std::runtime_error("failed to register order");
@@ -90,7 +90,7 @@ namespace Gut
 		// 3. Add Pagination
 		sql += " ORDER BY entry_ts DESC LIMIT ? OFFSET ?;";
 
-		Gut::SecureStmt stmt{nullptr};
+		Gut::SecureStmt stmt{db, sql.c_str()};
 		if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt.stmt, nullptr) != SQLITE_OK)
 		{
 			throw std::runtime_error("Failed to prepare fetch query");
@@ -153,7 +153,7 @@ namespace Gut
         RETURNING entry_price, quantity, type, symbol;
     )";
 
-		Gut::SecureStmt stmt{nullptr};
+		Gut::SecureStmt stmt{db, query};
 		if (sqlite3_prepare_v2(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK)
 		{
 			throw std::runtime_error("Database Error: Failed to prepare closeOrder statement.");

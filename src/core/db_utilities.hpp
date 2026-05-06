@@ -8,6 +8,7 @@ namespace Gut
 	{
 		sqlite3_stmt *stmt;
 		~SecureStmt();
+		SecureStmt(sqlite3 *db, const char *sql);
 	};
 
 	class Table_helper
@@ -19,6 +20,7 @@ namespace Gut
 		~Table_helper();
 	public:
 		sqlite3* getHandle();
+		void exec(const std::string& sql);
 	};
 
 	class TransactionGuard

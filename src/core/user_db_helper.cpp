@@ -9,9 +9,7 @@ uint32_t Gut::User_table::authenticateUser(String username, String password)
 {
 	// retrive the users salt
 	const char *querySalt = "SELECT salt FROM users WHERE username = ?";
-	Gut::SecureStmt stmtSalt{nullptr};
-	if (sqlite3_prepare_v2(db, querySalt, -1, &stmtSalt.stmt, nullptr) != SQLITE_OK)
-		throw std::runtime_error("can't fetch salt from db");
+	Gut::SecureStmt stmtSalt{db, querySalt};
 	sqlite3_bind_text(stmtSalt.stmt, 1, username.c_str(), -1, SQLITE_STATIC);
 
 	if (sqlite3_step(stmtSalt.stmt) == SQLITE_ROW)
@@ -46,7 +44,7 @@ uint32_t Gut::User_table::authenticateUser(String username, String password)
 
 		// retrieve the user id with username and hashed password
 		const char* queryAuthenticate = "SELECT id FROM users WHERE username = ? AND password = ?";
-		Gut::SecureStmt stmtAuth{nullptr};
+		Gut::SecureStmt stmtAuth{db, queryAuthenticate};
 
 		if (sqlite3_prepare_v2(db, queryAuthenticate, -1, &stmtAuth.stmt, nullptr) != SQLITE_OK)
 			throw std::runtime_error("can't authenticate user");
@@ -74,7 +72,7 @@ int Gut::User_table::addUser(String username, String password)
 
 	// check that there is no other user with the same username
 	const char *queryUsername = "SELECT COUNT(*) FROM users WHERE username = ?;";
-	Gut::SecureStmt stmtUsername{nullptr};
+	Gut::SecureStmt stmtUsername{db, queryUsername};
 	if (sqlite3_prepare_v2(db, queryUsername, -1, &stmtUsername.stmt, nullptr) != SQLITE_OK)
 		throw std::runtime_error("failed to check user uniqueness");
 
@@ -128,7 +126,7 @@ int Gut::User_table::addUser(String username, String password)
 	String hashStr = shash.str();
 
 	const char *query = "INSERT INTO users  (username, password, salt) VALUES (?,?,?)";
-	Gut::SecureStmt stmt{nullptr};
+	Gut::SecureStmt stmt{db, query};
 	if (sqlite3_prepare_v2(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK)
 		throw std::runtime_error("failed to prepare insert user");
 	 sqlite3_bind_text(stmt.stmt, 1, username.c_str(), -1, SQLITE_TRANSIENT);
@@ -211,7 +209,7 @@ bool Gut::User_table::isSecurePassword(const String &password, String &feedback)
 
 double Gut::User_table::getBalance(uint32_t usrId){
 	const char *query = "SELECT money FROM users WHERE id = ?";
-	Gut::SecureStmt stmt{nullptr};
+	Gut::SecureStmt stmt{db, query};
 	if (sqlite3_prepare(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK){
 		throw std::runtime_error("can't fetch balance from db");
 	}
@@ -234,7 +232,7 @@ double Gut::User_table::updateBalance(ID userId, double amount) {
         RETURNING money;
     )";
 
-    Gut::SecureStmt stmt{nullptr};
+    Gut::SecureStmt stmt{db, query};
     if (sqlite3_prepare(db, query, -1, &stmt.stmt, nullptr) != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare updateBalance " + String(sqlite3_errmsg(db)));
     }
