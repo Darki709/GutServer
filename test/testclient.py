@@ -243,7 +243,7 @@ def main():
             # Handle Login Response
             elif msg_type == MSG_LOGIN_RESPONSE:
                 if body[0] == LOGIN_SUCCESS:
-                    print("[SUCCESS] Logged in! Requesting Price Stream for TSLA...")
+                    print("[SUCCESS] Logged in! Requesting Price Stream for BTC-USD...")
                     payload = build_price_request("BTC-USD", "15m")
                     send_gcm_message(sock, aes_key, MSG_PRICE_REQUEST, next_reqid(), payload)
                 else:

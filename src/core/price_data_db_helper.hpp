@@ -2,52 +2,90 @@
 
 #include "../external/sqlite3.h"
 #include "db_utilities.hpp"
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace Gut
 {
+    // ── Interval string helpers ───────────────────────────────────────────────
+    // Defined here so both the fetcher and db helper share one copy.
 
-	struct OHLCVRow
-	{
-		uint64_t timestamp; // unix epoch
-		double open;
-		double high;
-		double low;
-		double close;
-		uint64_t volume;
-	};
+    inline static const std::unordered_map<int, std::string> INTERVAL_MAP = {
+        {    60, "1m"  },
+        {   300, "5m"  },
+        {   900, "15m" },
+        {  3600, "1h"  },
+        { 86400, "1d"  },
+    };
 
-	class Price_data_db_helper : public Table_helper
-	{
-	public:
-		/**
-		 * @brief Ensure both `fetch_history` and `price_history` tables exist.
-		 *        Call once at application startup before any fetch_live_data() call.
-		 */
-		int init_database(const std::string &db_path);
+    inline static std::string seconds_to_interval(int sec)
+    {
+        auto it = INTERVAL_MAP.find(sec);
+        return (it != INTERVAL_MAP.end()) ? it->second : "1m";
+    }
 
-		/**
-		 * @brief Get the last fetch time for a given ticker+interval from the `fetch_history` table.
-		 * @param ticker   e.g. "AAPL", "BTC-USD"
-		 * @param interval e.g. "1m", "5m", "15m", "1h", "1d"
-		 * @return Returns the last fetch time as unix timestamp, or 0 if never fetched.
-		 */
-		uint64_t get_last_fetch_time(const std::string &ticker,
-									 const std::string &interval);
+    // ─────────────────────────────────────────────────────────────────────────
 
-		/**
-		 * @brief Upsert price rows + update fetch_history, all inside one transaction.
-		 * @param ticker   e.g. "AAPL", "BTC-USD"
-		 * @param interval e.g. "1m", "5m", "15m", "1h", "1d"
-		 * @param rows     Vector of OHLCV rows to insert/update
-		 * @return Returns number of rows processed, or -1 on error.
-		 */
-		int insert_price_data(const std::string &ticker,
-							  const std::string &interval,
-							  const std::vector<OHLCVRow> &rows);
+    struct StockData
+    {
+        uint64_t ts     = 0;
+        double   open   = 0.0;
+        double   high   = 0.0;
+        double   low    = 0.0;
+        double   close  = 0.0;
+        uint64_t volume = 0;
+    };
 
+    enum class Interval : uint32_t
+    {
+        MIN_1  =    60,
+        MIN_5  =   300,
+        MIN_15 =   900,
+        HOUR_1 =  3600,
+        DAY_1  = 86400
+    };
 
-							  
-		Price_data_db_helper() = default;
-		~Price_data_db_helper() = default;
-	};
-}
+    class Price_data_db_helper : public Table_helper
+    {
+    public:
+        Price_data_db_helper()  = default;
+        ~Price_data_db_helper() = default;
+
+        /** Create tables if they don't exist. Call once at startup. */
+        int init_database(const std::string& db_path);
+
+        /**
+         * Returns the unix timestamp of the last stored candle for this
+         * ticker+interval, or 0 if no history exists.
+         */
+        uint64_t get_last_fetch_time(const std::string& ticker,
+                                     const std::string& interval);
+
+        /**
+         * Upsert rows into price_history and update fetch_history.
+         * Returns number of rows written, or -1 on error.
+         */
+        int insert_price_data(const std::string&           ticker,
+                              const std::string&           interval,
+                              const std::vector<StockData>& rows);
+
+        /**
+         * Returns the most-recent candle for symbol+interval, or nullopt.
+         * interval defaults to "1m" if omitted.
+         */
+        std::optional<StockData> getLastRow(String& symbol,
+                                            const std::string& interval = "1m");
+
+        /**
+         * Fetch a range of candles from price_history.
+         * start_ts / end_ts are optional unix timestamps (inclusive).
+         */
+        std::vector<StockData> fetchPriceData(String&                  symbol,
+                                              Interval                 interval,
+                                              std::optional<uint64_t>  start_ts,
+                                              std::optional<uint64_t>  end_ts);
+    };
+
+} // namespace Gut

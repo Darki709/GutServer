@@ -2,7 +2,8 @@
 
 #include "../libraries.hpp"
 #include "../core/message.hpp"
-#include "stock_db_helper.hpp"
+#include "../core/price_data_db_helper.hpp"
+#include "../core/yfinance_fetcher.hpp"
 
 namespace Gut
 {
@@ -51,10 +52,10 @@ namespace Gut
 		std::unordered_map<String,Ticker> streamingList;
 		std::mutex streamingListMutex;
 		std::thread thread;
-		Stock_helper* stockHelper;
 		Server& server;
 		std::atomic<bool> running{true};
 		std::mutex sleepMutex;               // Mutex for the condition variable
         std::condition_variable m_cv;        // Used for interruptible sleep
+		Price_data_db_helper price_helper;   //access the price database
 	};
 }

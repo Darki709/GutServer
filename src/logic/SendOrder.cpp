@@ -1,5 +1,6 @@
 #include "SendOrder.hpp"
 #include "../runtime/worker.hpp"
+#include "../core/price_data_db_helper.hpp"
 
 namespace Gut
 {
@@ -90,6 +91,9 @@ namespace Gut
 
 		// check is the user can even pay for the order he sent, we do this before the costy api call to refresh prices
 		double user_balance = Task::getClient()->getCredentials().balance;
+ 
+		//price db access helper
+		Price_data_db_helper price_helper;
 
 		if ((this->asking_price * this->quantity) > user_balance)
 		{
@@ -103,15 +107,14 @@ namespace Gut
 		StockData latest_data;
 		// the request is valid and now the task fetches the latest price
 		{
-			Stock_helper *stock_helper = resources.getStockHelper();
-			if (stock_helper->fetchLiveData(this->symbol, static_cast<uint32_t>(Interval::MIN_1)) != 0)
+			if (YFinance_fetcher::fetch_price_data(this->symbol, Interval::MIN_1) != 0)
 			{
 				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
 				content.append(n_reqId, 4);
 				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDSYMBOL));
 				return Message{content, Task::getClient()->getSocket()};
 			}
-			latest_data = stock_helper->getLastRowFromDB(this->symbol).value(); //this might break if no data is in the db, shouldn't happen though if the api call doesnt return error
+			latest_data = price_helper.getLastRow(this->symbol).value(); //this might break if no data is in the db, shouldn't happen though if the api call doesnt return error
 		}
 
 		// check for price slip

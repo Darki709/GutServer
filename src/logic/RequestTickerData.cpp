@@ -82,7 +82,7 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& res
 
 	// load price data from api, if nothing was thrown in means the fetch is ok,
 	// errors at execution are handled by the worker		
-	int status = resources.getStockHelper()->fetchLiveData(symbol, static_cast<int>(interval));
+	int status = YFinance_fetcher::fetch_price_data(symbol, interval);
 	switch (status)
 	{
 		case -1:

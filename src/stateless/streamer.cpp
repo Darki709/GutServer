@@ -2,11 +2,10 @@
 #include "../program/server.hpp" //allows streamer to add messages to the queue
 #include <algorithm>
 
-Gut::Streamer::Streamer() : server(Server::getInstance()), stockHelper(nullptr)
+Gut::Streamer::Streamer() : server(Server::getInstance())
 {
 	// start the streamer when some creates it for the first time
 	thread = std::thread(&Streamer::run, this);
-	stockHelper = new Stock_helper();
 	std::cout << "streamer started" << std::endl;
 }
 
@@ -20,7 +19,6 @@ Gut::Streamer::~Streamer()
 {
 	if (thread.joinable())
 		thread.join();
-	delete stockHelper;
 }
 
 void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
@@ -35,7 +33,7 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
 	{
 		// everytime a new client registers to stream we send him the last price data we have for that ticker so he gets an instant update without waiting for the next streaming update
 
-		std::optional<StockData> lastData = stockHelper->getLastRowFromDB(symbol);
+		std::optional<StockData> lastData = price_helper.getLastRow(symbol);
 		if (lastData.has_value())
 		{
 			streamingList[symbol].broadcast(lastData.value(), server);
@@ -187,7 +185,7 @@ void Gut::Streamer::run()
 			try
 			{
 				// Update DB via Python (Stock_helper)
-				int state = stockHelper->fetchLiveData(symbol, 60);
+				int state = YFinance_fetcher::fetch_price_data(symbol, Interval::MIN_1);
 				if (state != 0)
 				{
 					std::cerr << "Failed to fetch live data for " << symbol << " with error code: " << state << std::endl;
@@ -196,7 +194,7 @@ void Gut::Streamer::run()
 
 				// Fetch the row we just saved from SQLite
 				// Assuming this returns a struct with date, open, high, low, close, volume
-				std::optional<StockData> maybeData = stockHelper->getLastRowFromDB(symbol);
+				std::optional<StockData> maybeData = price_helper.getLastRow(symbol);
 
 				// Market Status Check
 				// Only broadcast if the timestamp is within the last 5 minutes

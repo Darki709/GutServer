@@ -9,35 +9,21 @@
   #include <Python.h>
 #endif
 #include "../external/sqlite3.h"
+#include "../core/yfinance_fetcher.hpp"
+#include "../core/price_data_db_helper.hpp"
 
 namespace Gut
 {
-
-	enum class Interval : uint32_t
-	{
-		MIN_1 = 60,
-		MIN_5 = 300,
-		MIN_15 = 900,
-		HOUR_1 = 3600,
-		DAY_1 = 86400
-	};
-
-	struct StockData{
-		uint64_t ts;
-		double open;
-		double high;
-		double low;
-		double close;
-		uint64_t volume;
-	};
-
+	/**
+	 * @deprecated
+	 * Was used when i used the yfinance python library for price fetching
+	 */
 	class Stock_helper
 	{
 	public:
 		static void init();
 		static void shutdown();
 		int fetchLiveData(String& ticker, uint32_t interval); // Returns 0 on success, -1 on Python error, -2 on other errors
-		void streamingLoop();
 		std::optional<StockData> getLastRowFromDB(String& symbol);
 		Stock_helper();
 		~Stock_helper();

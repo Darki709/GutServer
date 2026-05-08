@@ -1,5 +1,6 @@
 #include "endOrder.hpp"
 #include "../runtime/worker.hpp"
+#include "../core/price_data_db_helper.hpp"
 
 Gut::EndOrder::EndOrder(std::shared_ptr<Client> &client, uint32_t reqId, String content)
 	: Task(client, reqId)
@@ -62,9 +63,9 @@ std::optional<Gut::Message> Gut::EndOrder::execute(ThreadResources& resources)
 
     // --- MARKET CHECK ---
     Order &targetOrder = *it;
-    Stock_helper *stockHelper = resources.getStockHelper();
-    stockHelper->fetchLiveData(targetOrder.symbol, 60);
-    double actualPrice = stockHelper->getLastRowFromDB(targetOrder.symbol).value().close;
+    YFinance_fetcher::fetch_price_data(targetOrder.symbol, Interval::MIN_1);
+	Price_data_db_helper price_helper;
+    double actualPrice = price_helper.getLastRow(targetOrder.symbol).value().close;
 
     std::cout << "[DEBUG] Market Check - Symbol: " << targetOrder.symbol << " | Current Price: " << actualPrice << std::endl;
 
