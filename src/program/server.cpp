@@ -29,9 +29,6 @@ Gut::Server::~Server()
 
 void Gut::Server::serverStart()
 {
-	//initialize the python environment
-	Gut::Stock_helper::init();
-	std::cout << "Python stock helper started" << std::endl;
 	Streamer::getInstance();
 	std::cout <<"streamer started" << std::endl;
 	try
