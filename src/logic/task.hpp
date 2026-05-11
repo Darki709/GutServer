@@ -9,7 +9,8 @@ namespace Gut
 {
 	class Server;
 
-	struct AssignedClient{
+	struct AssignedClient
+	{
 		SOCKET client;
 		ClientState state;
 		AuthContext credentials;
@@ -28,27 +29,31 @@ namespace Gut
 		GETBALANCE,
 		SENDORDER,
 		FETCHORDERS,
-		ENDORDER
+		ENDORDER,
+		FETCH_WATCHLISTS,
+		MANAGE_WATCHLIST,
+		MODIFY_WATCHLIST_ITEMS,
+		GET_WATCHLIST_CONTENT,
 	};
 
-	class ThreadResources; //forawrd decleration
-	
+	class ThreadResources; // forawrd decleration
+
 	class Task
 	{
 	private:
 		std::weak_ptr<Client> client;
 		uint32_t reqId;
-		Server* server;
+		Server *server;
 
 	public:
-		Task(std::shared_ptr<Client>& client, uint32_t reqId);
+		Task(std::shared_ptr<Client> &client, uint32_t reqId);
 		~Task() = default;
 		std::shared_ptr<Gut::Client> getClient();
 		uint32_t getReqId();
-		Server* getServer();
-		void setServer(Server* server);
-		//instructions for the task
-		virtual std::optional<Message> execute(ThreadResources& resources) = 0;
+		Server *getServer();
+		void setServer(Server *server);
+		// instructions for the task
+		virtual std::optional<Message> execute(ThreadResources &resources) = 0;
 	};
 }
 

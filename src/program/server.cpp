@@ -367,9 +367,6 @@ void Gut::Server::serverShutDown()
 	// wake all workers blocked on taskCV
 	taskCV.notify_all();
 
-	//close python environment
-	Stock_helper::shutdown();
-
 	// destroy workers (they must join internally)
 	for (int i = 0; i < WORKERCOUNT; i++)
 	{

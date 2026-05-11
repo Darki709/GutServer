@@ -21,15 +21,17 @@ namespace Gut
 		ORDERSLIPPED,
 		ORDERSBATCH,
 		ORDEREXITTED,
-		ORDERFAILEDEXIT
+		ORDERFAILEDEXIT,
+		WATCHLIST_SUMMARY,
+		WATCHLIST_ACTION_STATUS,
+		WATCHLIST_CONTENT
 	};
-	
+
 	class Message
 	{
 	private:
 		String content;
 		SOCKET recipient;
-
 
 	public:
 		// crates a message

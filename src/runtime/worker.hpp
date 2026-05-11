@@ -16,15 +16,12 @@ namespace Gut {
 	 * **/
 	class ThreadResources {
 	public:
-		virtual Stock_helper* getStockHelper() = 0;
 	};
 
     class Worker : public ThreadResources {
     private:
         std::thread thread;
-		Stock_helper* stockHelper;
         Server* server; // pointer to Server, forward-declared
-		Stock_helper* getStockHelper() override;
         void run(); // main worker loop
 
     public:

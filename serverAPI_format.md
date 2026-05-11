@@ -436,3 +436,111 @@ Statuses:
 0 ORDERNOTEXIST order id doesnt match to an existing active order for the user
 1 EXPECTEDPRICEOUTOFRANGE the actual prive slipped out of the expected price range, the order wasnt exsited to prevent unwanted behaviour
 
+# Watchlist API
+---
+
+## Standard Status Codes (1 Byte)
+The following status codes are returned in the `Status` field of most response messages:
+
+| Status | Label | Description |
+| :--- | :--- | :--- |
+| `0` | **SUCCESS** | Operation completed successfully. |
+| `1` | **NOT_FOUND** | The specified list or ticker was not found. |
+| `2` | **DUPLICATE** | List name already exists or Ticker is already in the list. |
+| `3` | **INVALID_TICKER** | Ticker does not exist in the Global Master Tickers database. |
+| `4` | **DB_ERROR** | Internal database failure or SQL constraint violation. |
+| `5` | **UNAUTHORIZED** | User is not logged in or session has expired. |
+
+---
+
+## 1. Fetch All Watchlists
+**Task Type: 12 (FETCH_WATCHLISTS)** Requests a summary of all lists owned by the authenticated user.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `12` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID (Network Order) |
+
+### Server-to-Client (Response)
+**Message Type: 15 (WATCHLIST_SUMMARY)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `15` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | Status code (0, 4, or 5) |
+| 6 | 1 | `Count` | uint8 | Number of lists (N). 0 if status != 0 |
+| 7 | Var | `ListBlocks` | Byte[] | N instances of the **List Block** |
+
+**List Block Structure:**
+`[4B ListID (Network Order)][1B NameLen][Name String]`
+
+---
+
+## 2. Manage Watchlist Entities
+**Task Type: 13 (MANAGE_WATCHLIST)** Handles list creation, renaming, and deletion.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `13` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID |
+| 5 | 1 | `Action` | uint8 | `0: Create`, `1: Rename`, `2: Delete` |
+| 6 | 1 | `NameLen` | uint8 | Length of the list name |
+| 7 | Var | `Name` | String | Current/Original list name |
+| ? | 1 | `NewNameLen`| uint8 | *Action 1 only:* Length of new name |
+| ? | Var | `NewName` | String | *Action 1 only:* New name string |
+
+### Server-to-Client (Response)
+**Message Type: 16 (WATCHLIST_ACTION_STATUS)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `16` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | See Status Table (Success, Not Found, Duplicate, etc.) |
+
+---
+
+## 3. Modify Watchlist Contents
+**Task Type: 14 (MODIFY_WATCHLIST_ITEMS)** Adds or removes specific tickers from a list.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `14` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID |
+| 5 | 1 | `Action` | uint8 | `0: Add`, `1: Remove` |
+| 6 | 1 | `ListNmLen` | uint8 | Length of list name |
+| 7 | Var | `ListName` | String | Target list name |
+| ? | 1 | `SymLen` | uint8 | Length of ticker symbol |
+| ? | Var | `Symbol` | String | The ticker symbol (e.g. "AAPL") |
+
+### Server-to-Client (Response)
+**Message Type: 16 (WATCHLIST_ACTION_STATUS)**
+(Matches structure in Section 2)
+
+---
+
+## 4. Get Watchlist Content
+**Task Type: 15 (GET_WATCHLIST_CONTENT)** Fetches the full list of symbols for a specific watchlist.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `15` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID |
+| 5 | 1 | `NameLen` | uint8 | Length of list name |
+| 6 | Var | `Name` | String | List name string |
+
+### Server-to-Client (Response)
+**Message Type: 17 (WATCHLIST_CONTENT)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `17` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | 0 if found, 1 if list missing, 5 if unauthorized |
+| 6 | 1 | `Count` | uint8 | Number of tickers (N). 0 if status != 0 |
+| 7 | Var | `Symbols` | Byte[] | N instances of Symbol Block |
+
+**Symbol Block Structure:**
+`[1B SymbolLen][Symbol String]`

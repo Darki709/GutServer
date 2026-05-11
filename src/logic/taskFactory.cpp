@@ -12,6 +12,11 @@
 #include "SendOrder.hpp"
 #include "fetchorders.hpp"
 #include "endOrder.hpp"
+#include "FetchWatchlistsTask.hpp"
+#include "ModifyWatchlistItemsTask.hpp"
+#include "ManageWatchlistTask.hpp"
+#include "GetWatchlistContentTask.hpp"
+
 
 std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::shared_ptr<Client> &client)
 {
@@ -56,9 +61,17 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 		case static_cast<int>(TaskType::SENDORDER):
 			return std::make_unique<SendOrder>(client, reqId, content);
 		case static_cast<int>(TaskType::FETCHORDERS):
-			return std::make_unique<FetchOrdersTask>(client, reqId, content);	
+			return std::make_unique<FetchOrdersTask>(client, reqId, content);
 		case static_cast<int>(TaskType::ENDORDER):
-			return std::make_unique<EndOrder>(client, reqId, content);	
+			return std::make_unique<EndOrder>(client, reqId, content);
+		case static_cast<int>(TaskType::FETCH_WATCHLISTS):
+			return std::make_unique<FetchWatchlistsTask>(client, reqId);
+		case static_cast<int>(TaskType::MANAGE_WATCHLIST):
+			return std::make_unique<ManageWatchlistTask>(client, reqId, content);
+		case static_cast<int>(TaskType::MODIFY_WATCHLIST_ITEMS):
+			return std::make_unique<ModifyWatchlistItemsTask>(client, reqId, content);
+		case static_cast<int>(TaskType::GET_WATCHLIST_CONTENT):
+			return std::make_unique<GetWatchlistContentTask>(client, reqId, content);
 		default:
 			return nullptr;
 		}

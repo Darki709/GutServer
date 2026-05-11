@@ -6,18 +6,16 @@ namespace Gut
 {
 
 	Worker::Worker(Server *srv)
-		: server(srv), stockHelper(nullptr) {}
+		: server(srv){}
 
 	Worker::~Worker()
 	{
-		delete stockHelper;
 		if (thread.joinable())
 			thread.join();
 	}
 
 	void Worker::start()
 	{
-		stockHelper = new Stock_helper();
 		thread = std::thread(&Worker::run, this);
 	}
 
@@ -52,11 +50,6 @@ namespace Gut
 				std::cout << "Worker: task execution failed due to unknown bug" << std::endl;
 			}
 		}
-	}
-
-	Stock_helper* Worker::getStockHelper()
-	{
-		return stockHelper;
 	}
 
 }
