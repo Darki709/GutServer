@@ -531,6 +531,8 @@ The following status codes are returned in the `Status` field of most response m
 | 1 | 4 | `ReqID` | uint32 | Client-generated request ID |
 | 5 | 1 | `NameLen` | uint8 | Length of list name |
 | 6 | Var | `Name` | String | List name string |
+| ?| Offset | Int (4B) | The starting index for pagination (Big Endian) |
+| ? + 4| Limit | Int (4B) | Maximum number of items to return (Big Endian) |
 
 ### Server-to-Client (Response)
 **Message Type: 17 (WATCHLIST_CONTENT)**

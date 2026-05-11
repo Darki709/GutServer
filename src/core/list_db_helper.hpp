@@ -56,7 +56,7 @@ namespace Gut
 		 * @brief fetches all tickers belonging to a specific list
 		 * @return number of tickers found, -1 if list doesn't exist/db error
 		 */
-		int get_tickers_in_list(uint32_t user_id, String list_name, std::vector<String> &container);
+		int get_tickers_in_list(uint32_t user_id, String list_name, std::vector<String> &container, uint32_t offset, uint32_t limit);
 
 		/**
 		 * @brief renames an existing list
@@ -81,10 +81,11 @@ namespace Gut
 
 	inline const char *items_table_layout = R"(
 	CREATE TABLE IF NOT EXISTS list_items(
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	ticker TEXT NOT NULL,
-	list_id TEST NOT NULL,
-	PRIMARY KEY (list_id, ticker),
-    FOREIGN KEY(list_id) REFERENCES user_watchlists(id) ON DELETE CASCADE
+	list_id TEXT NOT NULL,
+	UNIQUE(list_id, ticker),
+    FOREIGN KEY(list_id) REFERENCES lists(id) ON DELETE CASCADE
 	);
 	)";
 

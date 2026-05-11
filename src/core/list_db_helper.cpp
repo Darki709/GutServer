@@ -85,14 +85,17 @@ int List_DB::get_all_lists(uint32_t user_id, std::vector<ListInfo> &container) {
     return (sqlite3_errcode(db) == SQLITE_OK || sqlite3_errcode(db) == SQLITE_DONE) ? count : -1;
 }
 
-int List_DB::get_tickers_in_list(uint32_t user_id, String list_name, std::vector<String> &container) {
+int List_DB::get_tickers_in_list(uint32_t user_id, String list_name, std::vector<String> &container, uint32_t offset, uint32_t limit) {
     SecureStmt stmt(db, 
         "SELECT i.ticker FROM list_items i "
         "JOIN lists l ON i.list_id = l.id "
-        "WHERE l.user_id = ? AND l.list_name = ?;");
+        "WHERE l.user_id = ? AND l.list_name = ? LIMIT ? OFFSET ?;");
     
     sqlite3_bind_int(stmt.stmt, 1, user_id);
     sqlite3_bind_text(stmt.stmt, 2, list_name.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt.stmt, 3, limit);
+	sqlite3_bind_int(stmt.stmt, 4, offset);
+
 
     int count = 0;
     while (sqlite3_step(stmt.stmt) == SQLITE_ROW) {
