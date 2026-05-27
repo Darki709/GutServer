@@ -33,10 +33,10 @@ void Gut::Streamer::registerTicket(String symbol, Ticket ticket)
 	{
 		// everytime a new client registers to stream we send him the last price data we have for that ticker so he gets an instant update without waiting for the next streaming update
 
-		std::optional<StockData> lastData = price_helper.getLastRow(symbol);
-		if (lastData.has_value())
+		std::vector<StockData> lastData = price_helper.getLastestRows(symbol);
+		if (!lastData.empty())
 		{
-			streamingList[symbol].broadcast(lastData.value(), server);
+			streamingList[symbol].broadcast(lastData.front(), server);
 		}
 
 		std::cout << "Instant price sent to new client for " << symbol << std::endl;
@@ -194,18 +194,18 @@ void Gut::Streamer::run()
 
 				// Fetch the row we just saved from SQLite
 				// Assuming this returns a struct with date, open, high, low, close, volume
-				std::optional<StockData> maybeData = price_helper.getLastRow(symbol);
+				std::vector<StockData> maybeData = price_helper.getLastestRows(symbol);
 
 				// Market Status Check
 				// Only broadcast if the timestamp is within the last 5 minutes
-				if (maybeData.has_value())
+				if (!maybeData.empty())
 				{
 					std::lock_guard<std::mutex> lock(streamingListMutex);
 					if (streamingList.contains(symbol))
 					{
 						std::cout << "data is valid to broadcast" << std::endl;
 						// This calls the binary formatting logic we built
-						streamingList[symbol].broadcast(maybeData.value(), server);
+						streamingList[symbol].broadcast(maybeData.front(), server);
 					}
 				}
 			}
@@ -250,7 +250,7 @@ void Gut::Streamer::cancelRequest(String symbol, SOCKET socket, uint32_t reqId)
 	auto it = streamingList.find(symbol);
 	if (it != streamingList.end())
 	{
-		it->second.removeClient(socket, reqId); // removes the client
+		it->second. removeClient(socket, reqId); // removes the client
 		if (it->second.isEmpty())
 		{
 			streamingList.erase(it); // erase the ticker because no client is requesting steaming for it

@@ -28,15 +28,19 @@ namespace Gut
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    struct StockData
-    {
-        uint64_t ts     = 0;
-        double   open   = 0.0;
-        double   high   = 0.0;
-        double   low    = 0.0;
-        double   close  = 0.0;
-        uint64_t volume = 0;
-    };
+    //class for the rows fetched from database
+	class StockData{
+	public:
+		uint64_t ts = 0;
+		double open = 0.0;
+		double close = 0.0;
+		double low = 0.0;
+		double high = 0.0;
+		uint64_t volume = 0;
+		StockData(uint64_t ts, double open, double close, double low, double high, uint64_t volume);
+		StockData() = default;
+		String messageFormat();
+	};
 
     enum class Interval : uint32_t
     {
@@ -75,8 +79,9 @@ namespace Gut
          * Returns the most-recent candle for symbol+interval, or nullopt.
          * interval defaults to "1m" if omitted.
          */
-        std::optional<StockData> getLastRow(String& symbol,
-                                            const std::string& interval = "1m");
+        std::vector<StockData> getLastestRows(String& symbol,
+                                            const std::string& interval = "1m",
+											uint32_t limit = 1);
 
         /**
          * Fetch a range of candles from price_history.

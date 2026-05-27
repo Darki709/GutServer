@@ -65,7 +65,7 @@ std::optional<Gut::Message> Gut::EndOrder::execute(ThreadResources& resources)
     Order &targetOrder = *it;
     YFinance_fetcher::fetch_price_data(targetOrder.symbol, Interval::MIN_1);
 	Price_data_db_helper price_helper;
-    double actualPrice = price_helper.getLastRow(targetOrder.symbol).value().close;
+    double actualPrice = price_helper.getLastestRows(targetOrder.symbol).front().close;
 
     std::cout << "[DEBUG] Market Check - Symbol: " << targetOrder.symbol << " | Current Price: " << actualPrice << std::endl;
 
