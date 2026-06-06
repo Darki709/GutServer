@@ -550,3 +550,89 @@ The following status codes are returned in the `Status` field of most response m
 
 **Symbol Block Structure:**
 `[1B SymbolLen][Symbol String]`
+
+# Chart State Sync API
+---
+
+Stores and syncs each authenticated user's **chart state** — drawings, per-symbol indicator
+sessions, and named indicator presets — so it follows the user across devices. The Android client
+keeps a local SQLite cache; these two messages reconcile it with the server using **per-record
+last-write-wins** (newest `updated_at` wins).
+
+## Record Model
+A record is identified by `(kind, key)` and carries a JSON payload plus sync metadata.
+
+| kind code | kind         | key          | payload (UTF-8 JSON)                          |
+| :--- | :--- | :--- | :--- |
+| `0` | drawings    | SYMBOL       | array of serialized user drawings              |
+| `1` | indicators  | SYMBOL       | array of indicator snapshots (per-symbol auto-save) |
+| `2` | preset      | preset name  | array of indicator snapshots (named preset)    |
+
+**Row Block Structure** (used in both the push request and the pull response):
+`[1B kindCode][2B keyLen][key][1B deleted][8B updated_at][4B payloadLen][payload]`
+- `keyLen`/`payloadLen`/`updated_at` are big-endian (network order); `updated_at` is epoch **millis**.
+- `deleted` = `1` marks a tombstone (a cleared record) so deletions propagate.
+
+Status codes are the shared table (`0` SUCCESS, `4` DB_ERROR, `5` UNAUTHORIZED).
+
+---
+
+## 1. Pull Chart State
+**Task Type: 16 (SYNC_CHART_PULL)** Requests all chart-state rows for the authenticated user.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `16` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID (Network Order) |
+
+*(No payload.)*
+
+### Server-to-Client (Response)
+**Message Type: 18 (CHART_SYNC_PULL_RESULT)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `18` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | `0` SUCCESS, `4` DB_ERROR, `5` UNAUTHORIZED |
+| 6 | 2 | `Count` | uint16 | Number of rows (N). `0` if status != 0 |
+| 8 | Var | `Rows` | Byte[] | N instances of the **Row Block** |
+
+---
+
+## 2. Push Chart State
+**Task Type: 17 (SYNC_CHART_PUSH)** Uploads the user's locally-changed rows; the server applies
+each one last-write-wins (a stale row whose `updated_at` is older than the stored copy is ignored).
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `17` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID |
+| 5 | 2 | `Count` | uint16 | Number of rows (N), big-endian |
+| 7 | Var | `Rows` | Byte[] | N instances of the **Row Block** |
+
+### Server-to-Client (Response)
+**Message Type: 19 (CHART_SYNC_PUSH_RESULT)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `19` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | `0` SUCCESS, `4` DB_ERROR, `5` UNAUTHORIZED |
+
+---
+
+## Server Storage
+`chart_state` table (shared `stock_data.db`), one row per `(user_id, kind, key)`:
+```
+CREATE TABLE IF NOT EXISTS chart_state(
+    user_id    INTEGER NOT NULL,
+    kind       TEXT NOT NULL,
+    item_key   TEXT NOT NULL,
+    payload    TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL DEFAULT 0,
+    deleted    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(user_id, kind, item_key),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```

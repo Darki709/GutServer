@@ -39,7 +39,7 @@ set(PYTHON_313_ROOT "C:/Users/NASASuperPC/AppData/Local/Programs/Python/Python31
 set(Python3_INCLUDE_DIR "${PYTHON_313_ROOT}/include")
 set(Python3_LIBRARIES "${PYTHON_313_ROOT}/libs/python313.lib")
 
-file(GLOB_RECURSE CPP_SOURCES
+file(GLOB_RECURSE CPP_SOURCES CONFIGURE_DEPENDS
 	src/**/*.cpp
 	src/**/**/*.cpp
 	src/*.cpp
