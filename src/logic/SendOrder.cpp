@@ -107,14 +107,8 @@ namespace Gut
 		StockData latest_data;
 		// the request is valid and now the task fetches the latest price
 		{
-			if (YFinance_fetcher::fetch_price_data(this->symbol, Interval::MIN_1) != 0)
-			{
-				content.push_back(static_cast<uint8_t>(MsgType::INVALIDORDER));
-				content.append(n_reqId, 4);
-				content.push_back(static_cast<uint8_t>(OrderStatus::INVALIDSYMBOL));
-				return Message{content, Task::getClient()->getSocket()};
-			}
-			latest_data = price_helper.getLastRow(this->symbol).value(); //this might break if no data is in the db, shouldn't happen though if the api call doesnt return error
+			YFinance_fetcher::fetch_price_data(this->symbol, Interval::MIN_1);
+			latest_data = price_helper.getLastestRows(this->symbol).front(); //this might break if no data is in the db, shouldn't happen though if the api call doesnt return error
 		}
 
 		// check for price slip

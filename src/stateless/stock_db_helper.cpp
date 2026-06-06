@@ -270,7 +270,7 @@ int Gut::Stock_helper::fetchLiveData(String &ticker, uint32_t interval)
 std::optional<Gut::StockData> Gut::Stock_helper::getLastRowFromDB(String &symbol)
 {
 	std::cout << "fetching streaming data for " << symbol << std::endl;
-	StockData data = {0}; // Initialize with zeros
+	StockData data; // Initialize with zeros
 	struct DB_Connection
 	{
 		sqlite3 *db;

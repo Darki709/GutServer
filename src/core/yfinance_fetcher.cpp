@@ -112,30 +112,31 @@ namespace Gut
     // ═════════════════════════════════════════════════════════════════════════
     //  Timestamp normalisation
     //
-    //  DAILY bars
-    //  ----------
-    //  Yahoo 1d timestamps are midnight UTC of the trading day
-    //  (e.g. 2023-09-01 00:00:00 UTC = 1693526400).  We keep them exactly as
-    //  midnight UTC.  The PRIMARY KEY on (ticker, interval, date) ensures the
-    //  same calendar day always maps to the same value across fetches.
+    //  ALL intervals (1m / 5m / 15m / 1h / 1d) are floored to a clean multiple
+    //  of the interval, measured from the Unix epoch. Because the epoch is
+    //  itself midnight UTC, integer floor division aligns every bar to a stable
+    //  grid:  1h → :00 each hour,  5m → :00/:05/…,  1d → 00:00:00 UTC.
     //
-    //  The previous "noon UTC" approach called timegm()/_mkgmtime() which is
-    //  unavailable on some Windows SDKs and was corrupting timestamps by
-    //  adding 12 hours, turning midnight into noon and producing a non-86400s
-    //  stride between daily bars (visible as huge gaps in the DB).
+    //  Why snap DAILY too (this used to be skipped):
+    //  Yahoo returns historical 1d bars at 00:00 UTC, but the *in-progress*
+    //  current-day bar is stamped at the last-trade time (e.g. 19:45). Leaving
+    //  that raw produced two problems once it was stored:
+    //    1. a non-86400s stride between the latest bar and the rest, and
+    //    2. a DUPLICATE day — the intraday-stamped bar plus the 00:00 bar from
+    //       a later full-range fetch both survive the (ticker,interval,date)
+    //       PRIMARY KEY because their `date` values differ.
+    //  Flooring to 86400 collapses the in-progress bar onto the same midnight
+    //  as its finalised version, so the key is stable and the stride is exact.
     //
-    //  INTRADAY bars  (1m / 5m / 15m / 1h)
-    //  -------------------------------------
-    //  Yahoo occasionally returns a bar at e.g. 21:33 for a 15m interval
-    //  (valid boundaries are :00 :15 :30 :45).  We snap each timestamp down
-    //  to the nearest clean multiple via integer floor division, making the
-    //  PRIMARY KEY stable across fetches and aligning bars for charting.
+    //  This uses pure integer floor division — no timegm()/_mkgmtime() (those
+    //  are missing on some Windows SDKs and previously corrupted timestamps by
+    //  shifting midnight to noon).
     // ═════════════════════════════════════════════════════════════════════════
 
     static std::time_t snap_to_interval(std::time_t raw, int interval_sec)
     {
-        if (interval_sec >= 86400) return raw;       // daily — keep as-is
-        return (raw / interval_sec) * interval_sec;  // floor to boundary
+        if (interval_sec <= 0) return raw;           // guard against bad input
+        return (raw / interval_sec) * interval_sec;  // floor to interval boundary
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -202,6 +203,7 @@ namespace Gut
 
         std::size_t n         = timestamps_j.size();
         int         skipped   = 0;
+        int         merged    = 0;
         rows.reserve(n);
 
         for (std::size_t i = 0; i < n; ++i)
@@ -219,10 +221,38 @@ namespace Gut
 
             std::time_t raw_ts = static_cast<std::time_t>(
                 timestamps_j[i].get<long long>());
-            std::time_t norm_ts = snap_to_interval(raw_ts, interval_sec);
+            uint64_t norm_ts = static_cast<uint64_t>(snap_to_interval(raw_ts, interval_sec));
+
+            // ── One candle per interval bucket ───────────────────────────────
+            // Yahoo can emit more than one raw point that floors to the same
+            // boundary (off-grid timestamps, or the in-progress bar sitting next
+            // to a clean boundary bar). Rather than push duplicates — which would
+            // either collide in the DB (losing the earlier OHLC) or surface as two
+            // points sharing one interval on the client — merge them into the
+            // existing candle so the series keeps a fixed per-interval stride.
+            // Timestamps arrive ascending, so a same-bucket point is always the
+            // current last row.
+            if (!rows.empty() && norm_ts == rows.back().ts)
+            {
+                StockData& prev = rows.back();
+                if (h > prev.high) prev.high = h;   // widen range
+                if (l < prev.low)  prev.low  = l;
+                prev.close   = c;                                   // latest close wins
+                prev.volume += static_cast<uint64_t>(vol);          // accumulate volume
+                // open is left as the first bar's open
+                ++merged;
+                continue;
+            }
+            if (!rows.empty() && norm_ts < rows.back().ts)
+            {
+                // Out-of-order after snapping (shouldn't happen for ascending
+                // input) — drop it so the stored series stays monotonic.
+                ++skipped;
+                continue;
+            }
 
             StockData row{};
-            row.ts     = static_cast<uint64_t>(norm_ts);
+            row.ts     = norm_ts;
             row.open   = o;
             row.high   = h;
             row.low    = l;
@@ -231,8 +261,9 @@ namespace Gut
             rows.push_back(row);
         }
 
-        std::cout << "[PARSE] " << rows.size() << " valid candles ("
-                  << skipped << " skipped) for interval=" << interval << '\n';
+        std::cout << "[PARSE] " << rows.size() << " candles ("
+                  << skipped << " skipped, " << merged << " merged) for interval="
+                  << interval << '\n';
         return rows;
     }
 

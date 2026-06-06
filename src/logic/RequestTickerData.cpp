@@ -42,6 +42,16 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 		throw Errors::INVALIDREQUEST;
 	}
 
+	if (content.size() == 5)
+	{
+		this->limit = ntohl(*reinterpret_cast<const uint32_t *>(content.data()));
+		this->start_ts = 0;
+		this->end_ts = 0;
+		this->stream = (content[4] & Flags::STREAM) != 0;
+		this->snapshot = (content[4] & Flags::SNAPSHOT) != 0;
+		std::cout << "RequestTickerData started: " << symbol << " interval: " << interval << " limit: " << this->limit << std::endl;
+		return;
+	}
 	// get timestamps for the data
 	uint64_t start_ts;
 	uint64_t end_ts;
@@ -51,6 +61,7 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 	content.erase(0, 8);
 	this->start_ts = htonll(start_ts);
 	this->end_ts = htonll(end_ts);
+	this->limit = 0; // no limit
 
 	// parse flags
 	uint8_t flags = static_cast<uint8_t>(content[0]);
@@ -60,7 +71,7 @@ Gut::RequestTickerData::RequestTickerData(std::shared_ptr<Client> &client, uint3
 	std::cout << "RequestTickerData started: " << symbol << " interval: " << interval << " start_ts: " << this->start_ts << " end_ts: " << this->end_ts << " stream: " << stream << " snapshot: " << snapshot << std::endl;
 }
 
-std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& resources)
+std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources &resources)
 {
 	// check if client still lives
 	std::shared_ptr<Client> client = Task::getClient();
@@ -74,36 +85,36 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& res
 	uint32_t reqId = Task::getReqId();
 	std::cout << "proccessing " << std::to_string(reqId) << std::endl;
 
-	if(!snapshot && !stream)
-	{ 
+	if (!snapshot && !stream)
+	{
 		std::cout << "neither snapshot nor stream flag is set, invalid request" << std::endl;
 		throw Errors::INVALIDREQUEST;
 	}
 
 	// load price data from api, if nothing was thrown in means the fetch is ok,
-	// errors at execution are handled by the worker		
+	// errors at execution are handled by the worker
 	int status = YFinance_fetcher::fetch_price_data(symbol, interval);
 	switch (status)
 	{
-		case -1:
-			{
-				std::cout << "Failed api call, checking db for cached data" << std::endl;
-				// String content;
-				// content.push_back(static_cast<char>(MsgType::SNAPSHOT));
-				// uint32_t network_reqId = htonl(reqId);
-				// content.append(reinterpret_cast<char *>(&network_reqId), 4);
-				// content.push_back(1); // last message
-				// uint16_t network_count = htons(0); // 0 candles
-				// content.append(reinterpret_cast<char *>(&network_count), 2);
-				// return std::make_optional(Message{content, socket});
-				break;
-			}
-		case -2:
-			std::cout << "Error during api call" << std::endl;
-			break;
-		default:
-			std::cout << "finished api call" << std::endl;
-			break;				
+	case -1:
+	{
+		std::cout << "Failed api call, checking db for cached data" << std::endl;
+		// String content;
+		// content.push_back(static_cast<char>(MsgType::SNAPSHOT));
+		// uint32_t network_reqId = htonl(reqId);
+		// content.append(reinterpret_cast<char *>(&network_reqId), 4);
+		// content.push_back(1); // last message
+		// uint16_t network_count = htons(0); // 0 candles
+		// content.append(reinterpret_cast<char *>(&network_count), 2);
+		// return std::make_optional(Message{content, socket});
+		break;
+	}
+	case -2:
+		std::cout << "Error during api call" << std::endl;
+		break;
+	default:
+		std::cout << "finished api call" << std::endl;
+		break;
 	}
 
 	// check if user wants to sign up for streaming
@@ -116,30 +127,39 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& res
 	// check if user asked for snapshot of historical data
 	if (snapshot)
 	{
-
-		// read data from database		
-		// get db path
-		wchar_t path[MAX_PATH];
-		GetModuleFileNameW(NULL, path, MAX_PATH);
-		std::filesystem::path exePath(path);
-		std::filesystem::path exeDir = exePath.parent_path();
-		std::filesystem::path dbPath = exeDir / "database" / "stock_data.db"; // get database path
-		std::string db_path = dbPath.string();
-
-		std::cout << "db path: " << db_path << std::endl;
-
-		// connect to db
-		sqlite3 *db;
-
-		int rc = sqlite3_open(db_path.c_str(), &db);
-		if (rc != SQLITE_OK)
+		std::vector<StockData> data;
+		if (limit != 0)
 		{
-			throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
+			// get the latest rows from the database
+			Price_data_db_helper price_helper;
+			data.reserve(limit * 48); // preallocate for efficiency
+			data = price_helper.getLastestRows(symbol, seconds_to_interval(static_cast<uint32_t>(interval)), limit);
 		}
-		// This allows your Python thread to WRITE while your C++ thread READS
-		sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
-		std::cout << "conected to db" << std::endl;
-		const char *sql = R"(
+		else
+		{
+			// read data from database
+			// get db path
+			wchar_t path[MAX_PATH];
+			GetModuleFileNameW(NULL, path, MAX_PATH);
+			std::filesystem::path exePath(path);
+			std::filesystem::path exeDir = exePath.parent_path();
+			std::filesystem::path dbPath = exeDir / "database" / "stock_data.db"; // get database path
+			std::string db_path = dbPath.string();
+
+			std::cout << "db path: " << db_path << std::endl;
+
+			// connect to db
+			sqlite3 *db;
+
+			int rc = sqlite3_open(db_path.c_str(), &db);
+			if (rc != SQLITE_OK)
+			{
+				throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(db)));
+			}
+			// This allows your Python thread to WRITE while your C++ thread READS
+			sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+			std::cout << "conected to db" << std::endl;
+			const char *sql = R"(
         SELECT date, open, high, low, close, volume
         FROM price_history
         WHERE ticker = ? AND interval = ?
@@ -147,81 +167,81 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& res
 		AND ( ? = 0 OR date <= ? )
 		ORDER BY date ASC)";
 
-		// prepare sql query
-		sqlite3_stmt *stmt;
-		if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
-		{
-			sqlite3_close(db);
-			throw std::runtime_error("Failed to prepare statement");
-		}
-
-		String interval;
-		switch (this->interval)
-		{
-		case Interval::MIN_1:
-			interval = "1m";
-			break;
-		case Interval::MIN_5:
-			interval = "5m";
-			break;
-		case Interval::MIN_15:
-			interval = "15m";
-			break;
-		case Interval::HOUR_1:
-			interval = "1h";
-			break;
-		case Interval::DAY_1:
-			interval = "1d";
-			break;
-		default:
-			throw Errors::INVALIDREQUEST;
-		}
-
-		sqlite3_bind_text(stmt, 1, symbol.c_str(), -1, SQLITE_STATIC);
-		sqlite3_bind_text(stmt, 2, interval.c_str(), -1, SQLITE_STATIC);
-		sqlite3_bind_int64(stmt, 3, start_ts);
-		sqlite3_bind_int64(stmt, 4, start_ts);
-		sqlite3_bind_int64(stmt, 5, end_ts);
-		sqlite3_bind_int64(stmt, 6, end_ts);
-
-		std::vector<PriceData> data;
-		data.reserve(8000); // preallocate to increase efficiency
-
-		try
-		{
-			int count = 0;
-			while (sqlite3_step(stmt) == SQLITE_ROW)
+			// prepare sql query
+			sqlite3_stmt *stmt;
+			if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
 			{
-				int64_t date = sqlite3_column_int64(stmt, 0);
-				double open = sqlite3_column_double(stmt, 1);
-				double high = sqlite3_column_double(stmt, 2);
-				double low = sqlite3_column_double(stmt, 3);
-				double close = sqlite3_column_double(stmt, 4);
-				int64_t volume = sqlite3_column_int64(stmt, 5);
-				data.push_back(PriceData{static_cast<uint64_t>(date), open, close, low, high, static_cast<uint64_t>(volume)});
-				count++;
+				sqlite3_close(db);
+				throw std::runtime_error("Failed to prepare statement");
 			}
-			if(count == 0) // no data found for this ticker and interval, send empty message to client so it knows the request is processed and there is no data
+
+			String interval;
+			switch (this->interval)
 			{
-				std::cout << "no data found for this ticker and interval" << std::endl;
-				String content;
-				content.push_back(static_cast<char>(MsgType::SNAPSHOT));
-				uint32_t network_reqId = htonl(reqId);
-				content.append(reinterpret_cast<char *>(&network_reqId), 4);
-				content.push_back(1); // last message
-				uint16_t network_count = htons(0); // 0 candles
-				content.append(reinterpret_cast<char *>(&network_count), 2);
-				return std::make_optional(Message{content, socket});
+			case Interval::MIN_1:
+				interval = "1m";
+				break;
+			case Interval::MIN_5:
+				interval = "5m";
+				break;
+			case Interval::MIN_15:
+				interval = "15m";
+				break;
+			case Interval::HOUR_1:
+				interval = "1h";
+				break;
+			case Interval::DAY_1:
+				interval = "1d";
+				break;
+			default:
+				throw Errors::INVALIDREQUEST;
 			}
-		}
-		catch (...)
-		{
+
+			sqlite3_bind_text(stmt, 1, symbol.c_str(), -1, SQLITE_STATIC);
+			sqlite3_bind_text(stmt, 2, interval.c_str(), -1, SQLITE_STATIC);
+			sqlite3_bind_int64(stmt, 3, start_ts);
+			sqlite3_bind_int64(stmt, 4, start_ts);
+			sqlite3_bind_int64(stmt, 5, end_ts);
+			sqlite3_bind_int64(stmt, 6, end_ts);
+
+			data.reserve(8000); // preallocate to increase efficiency
+
+			try
+			{
+				int count = 0;
+				while (sqlite3_step(stmt) == SQLITE_ROW)
+				{
+					int64_t date = sqlite3_column_int64(stmt, 0);
+					double open = sqlite3_column_double(stmt, 1);
+					double high = sqlite3_column_double(stmt, 2);
+					double low = sqlite3_column_double(stmt, 3);
+					double close = sqlite3_column_double(stmt, 4);
+					int64_t volume = sqlite3_column_int64(stmt, 5);
+					data.push_back(StockData{static_cast<uint64_t>(date), open, close, low, high, static_cast<uint64_t>(volume)});
+					count++;
+				}
+				if (count == 0) // no data found for this ticker and interval, send empty message to client so it knows the request is processed and there is no data
+				{
+					std::cout << "no data found for this ticker and interval" << std::endl;
+					String content;
+					content.push_back(static_cast<char>(MsgType::SNAPSHOT));
+					uint32_t network_reqId = htonl(reqId);
+					content.append(reinterpret_cast<char *>(&network_reqId), 4);
+					content.push_back(1);			   // last message
+					uint16_t network_count = htons(0); // 0 candles
+					content.append(reinterpret_cast<char *>(&network_count), 2);
+					return std::make_optional(Message{content, socket});
+				}
+			}
+			catch (...)
+			{
+				sqlite3_finalize(stmt);
+				sqlite3_close(db);
+				throw std::runtime_error("failed to read from db");
+			}
 			sqlite3_finalize(stmt);
 			sqlite3_close(db);
-			throw std::runtime_error("failed to read from db");
 		}
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 
 		int count = 0;
 		// send messages to the client
@@ -251,18 +271,3 @@ std::optional<Gut::Message> Gut::RequestTickerData::execute(ThreadResources& res
 	// this execute sends the messages by itself
 	return std::nullopt;
 }
-	Gut::PriceData::PriceData(uint64_t date, double open, double close, double low,
-							  double high, uint64_t volume) : date(date), open(open), close(close), low(low), high(high), volume(volume) {}
-
-	Gut::String Gut::PriceData::messageFormat()
-	{
-		String content;
-		content.reserve(48);
-		append_bytes(content, htonll(date));
-		append_8bytes_num(content, open);
-		append_8bytes_num(content, high);
-		append_8bytes_num(content, low);
-		append_8bytes_num(content, close);
-		append_bytes(content, htonll(volume));
-		return content;
-	}

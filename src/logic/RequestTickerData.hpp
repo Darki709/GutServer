@@ -5,6 +5,7 @@
 #include "../stateless/stock_db_helper.hpp"
 #include "../external/sqlite3.h"
 #include "../stateless/streamer.hpp"
+#include "../core/price_data_db_helper.hpp"
 
 
 namespace Gut
@@ -30,6 +31,9 @@ namespace Gut
 		uint64_t start_ts; //0 for the earliest date
 		uint64_t end_ts;//0 for current date
 
+		//candle count limit
+		uint32_t limit;
+
 		// does client want price streaming
 		bool stream;
 		// does client want historical data
@@ -38,19 +42,5 @@ namespace Gut
 	public:
 		RequestTickerData(std::shared_ptr<Client> &client, uint32_t reqId, String content);
 		std::optional<Message> execute(ThreadResources& resources) override;
-	};
-
-	//class for the rows fetched from database
-	class PriceData{
-	private:
-		uint64_t date;
-		double open;
-		double close;
-		double low;
-		double high;
-		uint64_t volume;
-	public:
-		PriceData(uint64_t date, double open, double close, double low, double high, uint64_t volume);
-		String messageFormat();
 	};
 }

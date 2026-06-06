@@ -94,6 +94,10 @@ This request is sent by a client to retrieve historical or streaming price data 
 | ?      | 1            | `flags`      | Bitwise flags (`uint8_t`) specifying request options:  
 |        |              |              | - `0x01` → `SNAPSHOT` (historical snapshot)  
 |        |              |              | - `0x02` → `STREAM` (live streaming feed)  
+# alt format: after the interval instead of the start_ts and end_ts 
+| ?		 | 4 			| 'count'	   | the number of latest candles you want (you will get upto that number of candles if there are less)
+|        |              |              | - `0x01` → `SNAPSHOT` (historical snapshot)  
+|        |              |              | - `0x02` → `STREAM` (live streaming feed)
 
 ---
 
