@@ -58,7 +58,10 @@ namespace Gut
 			sqlite3_bind_int(stmt.stmt, 1, user_id);
 			sqlite3_bind_text(stmt.stmt, 2, kind.c_str(), -1, SQLITE_TRANSIENT);
 			sqlite3_bind_text(stmt.stmt, 3, key.c_str(), -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt.stmt, 4, payload.c_str(), -1, SQLITE_TRANSIENT);
+			// Bind the payload with an explicit length (not -1/strlen) so a JSON blob that
+			// happens to contain an embedded NUL is stored whole rather than truncated. The
+			// cast is safe: the receive layer caps a single frame at 32 MB.
+			sqlite3_bind_text(stmt.stmt, 4, payload.data(), static_cast<int>(payload.size()), SQLITE_TRANSIENT);
 			sqlite3_bind_int64(stmt.stmt, 5, static_cast<sqlite3_int64>(updated_at));
 			sqlite3_bind_int(stmt.stmt, 6, deleted ? 1 : 0);
 

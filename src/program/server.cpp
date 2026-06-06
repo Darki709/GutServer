@@ -202,6 +202,11 @@ void Gut::Server::proccesOutMessages()
 // recieves bytes from clients and checks if there are full messages ready to parse to tasks
 void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 {
+	// Hard ceiling on a single framed message. Bounds per-client buffering and makes the
+	// 4 + len math safe. Must stay comfortably above the largest legitimate frame (a full
+	// chart-state push of all dirty drawings/indicators/presets); 32 MB is far above that.
+	constexpr uint32_t MAX_MESSAGE_LEN = 32u * 1024u * 1024u;
+
 	for (auto it = clients.begin(); it != clients.end();) // Manual iterator
 	{
 		auto &[socket, client] = *it;
@@ -224,10 +229,18 @@ void Gut::Server::checkRequests(ClientSet &clients, fd_set &readfds)
 
 					std::cout << "[FRAME] Socket " << socket << " | Header says next msg is: " << len << " bytes" << std::endl;
 
+					// Reject absurd frame sizes before buffering/allocating. Stops a corrupt
+					// or hostile length from growing incomingBuffer toward gigabytes, and also
+					// guarantees 4 + len below can't wrap a uint32. A bad frame means the byte
+					// stream is unusable, so kick the client (same as a failed decode).
+					if (len > MAX_MESSAGE_LEN)
+						throw std::runtime_error("frame length exceeds maximum");
+
 					//if the full message is not yet arrived, wait for next recv
-					if (client->getInBuffer().length() < 4 + len)
+					//(size math in 64-bit so 4 + len never overflows)
+					if (client->getInBuffer().length() < static_cast<size_t>(len) + 4)
 					{
-						std::cout << "[WAIT] Need " << (4 + len) - client->getInBuffer().length() << " more bytes for full message." << std::endl;
+						std::cout << "[WAIT] Need " << (static_cast<size_t>(len) + 4) - client->getInBuffer().length() << " more bytes for full message." << std::endl;
 						break;
 					}
 
