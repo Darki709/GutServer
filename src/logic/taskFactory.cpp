@@ -16,6 +16,10 @@
 #include "ModifyWatchlistItemsTask.hpp"
 #include "ManageWatchlistTask.hpp"
 #include "GetWatchlistContentTask.hpp"
+#include "SyncChartPullTask.hpp"
+#include "SyncChartPushTask.hpp"
+#include "SyncAlertPullTask.hpp"
+#include "SyncAlertPushTask.hpp"
 
 
 std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::shared_ptr<Client> &client)
@@ -72,6 +76,14 @@ std::unique_ptr<Gut::Task> Gut::TaskFactory::createTask(Message message, std::sh
 			return std::make_unique<ModifyWatchlistItemsTask>(client, reqId, content);
 		case static_cast<int>(TaskType::GET_WATCHLIST_CONTENT):
 			return std::make_unique<GetWatchlistContentTask>(client, reqId, content);
+		case static_cast<int>(TaskType::SYNC_CHART_PULL):
+			return std::make_unique<SyncChartPullTask>(client, reqId);
+		case static_cast<int>(TaskType::SYNC_CHART_PUSH):
+			return std::make_unique<SyncChartPushTask>(client, reqId, content);
+		case static_cast<int>(TaskType::SYNC_ALERT_PULL):
+			return std::make_unique<SyncAlertPullTask>(client, reqId);
+		case static_cast<int>(TaskType::SYNC_ALERT_PUSH):
+			return std::make_unique<SyncAlertPushTask>(client, reqId, content);
 		default:
 			return nullptr;
 		}
