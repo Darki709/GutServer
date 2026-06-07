@@ -636,3 +636,88 @@ CREATE TABLE IF NOT EXISTS chart_state(
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```
+
+# Alert Sync API
+---
+
+Stores and syncs each authenticated user's **alerts** (price/indicator triggers) so they
+survive logout and follow the user across devices. The Android client keeps a local SQLite
+store; these two messages reconcile it with the server using **per-alert last-write-wins**
+(newest `updated_at` wins), keyed by a client-generated **UUID** (the local row id is
+per-device and not portable).
+
+## Record Model
+A record is identified by `uuid` and carries an opaque JSON `payload` (the alert's fields —
+symbol, label, status, repeat mode, cooldown, priority, condition type + condition JSON) plus
+sync metadata. The server never interprets the payload; only the client does.
+
+**Row Block Structure** (used in both the push request and the pull response):
+`[2B uuidLen][uuid][1B deleted][8B updated_at][4B payloadLen][payload]`
+- `uuidLen`/`payloadLen`/`updated_at` are big-endian (network order); `updated_at` is epoch **millis**.
+- `deleted` = `1` marks a tombstone (a removed alert) so deletions propagate.
+- `payload` is UTF-8 JSON and may contain arbitrary bytes; it is length-prefixed (never NUL-terminated).
+
+Status codes are the shared table (`0` SUCCESS, `4` DB_ERROR, `5` UNAUTHORIZED).
+
+---
+
+## 1. Pull Alerts
+**Task Type: 18 (SYNC_ALERT_PULL)** Requests all alert rows for the authenticated user.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `18` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID (Network Order) |
+
+*(No payload.)*
+
+### Server-to-Client (Response)
+**Message Type: 20 (ALERT_SYNC_PULL_RESULT)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `20` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | `0` SUCCESS, `4` DB_ERROR, `5` UNAUTHORIZED |
+| 6 | 2 | `Count` | uint16 | Number of rows (N). `0` if status != 0 |
+| 8 | Var | `Rows` | Byte[] | N instances of the **Row Block** |
+
+---
+
+## 2. Push Alerts
+**Task Type: 19 (SYNC_ALERT_PUSH)** Uploads the user's locally-changed alerts; the server
+applies each one last-write-wins (a stale row whose `updated_at` is older than the stored copy
+is ignored). The server parse is fully bounds-checked — a malformed batch yields `DB_ERROR`,
+never a crash.
+
+### Client-to-Server (Request)
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `TaskType` | uint8 | Set to `19` |
+| 1 | 4 | `ReqID` | uint32 | Client-generated request ID |
+| 5 | 2 | `Count` | uint16 | Number of rows (N), big-endian |
+| 7 | Var | `Rows` | Byte[] | N instances of the **Row Block** |
+
+### Server-to-Client (Response)
+**Message Type: 21 (ALERT_SYNC_PUSH_RESULT)**
+| Offset | Size | Field | Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 1 | `MsgType` | uint8 | Set to `21` |
+| 1 | 4 | `ReqID` | uint32 | Matching Request ID |
+| 5 | 1 | `Status` | uint8 | `0` SUCCESS, `4` DB_ERROR, `5` UNAUTHORIZED |
+
+---
+
+## Server Storage
+`alert_state` table (shared `stock_data.db`), one row per `(user_id, uuid)`:
+```
+CREATE TABLE IF NOT EXISTS alert_state(
+    user_id    INTEGER NOT NULL,
+    uuid       TEXT NOT NULL,
+    payload    TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL DEFAULT 0,
+    deleted    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(user_id, uuid),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```

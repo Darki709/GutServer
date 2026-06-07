@@ -36,6 +36,8 @@ namespace Gut
 		GET_WATCHLIST_CONTENT,
 		SYNC_CHART_PULL,   // 16
 		SYNC_CHART_PUSH,   // 17
+		SYNC_ALERT_PULL,   // 18
+		SYNC_ALERT_PUSH,   // 19
 	};
 
 	class ThreadResources; // forawrd decleration
