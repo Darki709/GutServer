@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "../core/db_initializer.hpp"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -29,6 +30,11 @@ Gut::Server::~Server()
 
 void Gut::Server::serverStart()
 {
+	// Auto-initialise stock_data.db (all app tables except the manually-loaded tickers
+	// table) before any subsystem touches the database.
+	if (!DB_Initializer::initialize())
+		throw std::runtime_error("Database initialization failed — aborting startup");
+
 	Streamer::getInstance();
 	std::cout <<"streamer started" << std::endl;
 	try

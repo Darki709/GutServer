@@ -93,4 +93,36 @@ namespace Gut
                                               std::optional<uint64_t>  end_ts);
     };
 
+    // ── Table layouts (single source of truth) ────────────────────────────────
+    // Shared by Price_data_db_helper::init_database and the central DB_Initializer.
+    // fetch_time is a raw INTEGER unix timestamp so get_last_fetch_time stays
+    // timezone-proof (no localtime/mktime round-trips).
+    inline const char *fetch_history_table_layout = R"sql(
+        CREATE TABLE IF NOT EXISTS fetch_history (
+            ticker     TEXT,
+            interval   TEXT,
+            fetch_time INTEGER NOT NULL,
+            PRIMARY KEY (ticker, interval)
+        );
+    )sql";
+
+    inline const char *price_history_table_layout = R"sql(
+        CREATE TABLE IF NOT EXISTS price_history (
+            ticker   TEXT,
+            interval TEXT,
+            date     BIGINT  NOT NULL,
+            open     REAL,
+            high     REAL,
+            low      REAL,
+            close    REAL,
+            volume   INTEGER,
+            PRIMARY KEY (ticker, interval, date)
+        );
+    )sql";
+
+    inline const char *price_history_index_layout = R"sql(
+        CREATE INDEX IF NOT EXISTS idx_price_ticker_interval_date
+            ON price_history (ticker, interval, date);
+    )sql";
+
 } // namespace Gut

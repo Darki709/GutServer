@@ -79,7 +79,7 @@ namespace Gut
 
 	//table creation query
 	inline const String create_order_table_query = R"(
-	CREATE TABLE orders (
+	CREATE TABLE IF NOT EXISTS orders (
     order_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL, 
     symbol TEXT NOT NULL,

@@ -14,35 +14,11 @@ namespace Gut
 	{
 		try
 		{
-			// fetch_time stored as INTEGER unix timestamp (not a formatted string)
-			// so get_last_fetch_time never needs localtime/mktime and is timezone-proof.
-			exec(R"sql(
-                CREATE TABLE IF NOT EXISTS fetch_history (
-                    ticker     TEXT,
-                    interval   TEXT,
-                    fetch_time INTEGER NOT NULL,
-                    PRIMARY KEY (ticker, interval)
-                );
-            )sql");
-
-			exec(R"sql(
-                CREATE TABLE IF NOT EXISTS price_history (
-                    ticker   TEXT,
-                    interval TEXT,
-                    date     BIGINT  NOT NULL,
-                    open     REAL,
-                    high     REAL,
-                    low      REAL,
-                    close    REAL,
-                    volume   INTEGER,
-                    PRIMARY KEY (ticker, interval, date)
-                );
-            )sql");
-
-			exec(R"sql(
-                CREATE INDEX IF NOT EXISTS idx_price_ticker_interval_date
-                    ON price_history (ticker, interval, date);
-            )sql");
+			// Layouts live in the header so the central DB_Initializer reuses the exact
+			// same DDL (single source of truth).
+			exec(fetch_history_table_layout);
+			exec(price_history_table_layout);
+			exec(price_history_index_layout);
 
 			std::cout << "[DB] Tables initialised.\n";
 			return 0;
